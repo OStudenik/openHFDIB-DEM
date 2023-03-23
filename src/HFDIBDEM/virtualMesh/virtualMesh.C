@@ -42,8 +42,8 @@ using namespace Foam;
 virtualMesh::virtualMesh
 (
     virtualMeshInfo& vMeshInfo,
-    geomModel& cGeomModel,
-    geomModel& tGeomModel
+    IGeomModelVM& cGeomModel,
+    IGeomModelVM& tGeomModel
 )
 :
 cGeomModel_(cGeomModel),
