@@ -659,7 +659,6 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                     *sCW
                     ));
             }
-            // Pout <<" Survived " << endl;
 
             forAll (wallContactIB,iB)
             {
@@ -680,9 +679,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                         );
                     }
                 }
-                cIb.getWallCntInfo().clearOldContact();
             }
-            // Pout <<" Survived 2 " << endl;
         }
         wallContactList.clear();
         wallContactIB.clear();

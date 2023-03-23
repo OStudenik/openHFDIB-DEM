@@ -43,6 +43,7 @@ Contributors
 #include "fvCFD.H"
 
 #include "geomModel.H"
+#include "wallModel.H"
 #include "ibContactVars.H"
 #include "ibContactClass.H"
 #include "wallContactVars.H"
@@ -93,9 +94,11 @@ class wallContactInfo
 
     autoPtr<spectatorMesh> SM_;
 
-    autoPtr<virtualMeshWallInfo> vmwInfo_;
+    // autoPtr<virtualMeshWallInfo> vmwInfo_;
 
-    List<string> contactPatches_;
+    // List<string> contactPatches_;
+
+    std::unique_ptr<wallModel> wallModel_;
 
     public:
 
@@ -142,7 +145,7 @@ class wallContactInfo
         string wallName
     );
 
-    bool detectWallContact();
+    bool detectWallContact(const List<string> wallPatches);
 
     void findContactAreas();
 
@@ -196,17 +199,6 @@ class wallContactInfo
         string wallName
     );
 
-    void recoredResults
-    (
-        DynamicList<vector> contactPoints,
-        DynamicList<vector> surfaceSMCells,
-        DynamicList<vector> internalSMCells,
-        label SCID,
-        scalar time
-    );
-
-    void clearOldContact();
-
     void setNewSubContact(
         const List<Tuple2<point,boundBox>>& contactBBData,
         const List<Tuple2<point,boundBox>>& planeBBData,
@@ -221,15 +213,6 @@ class wallContactInfo
     }
 
     void registerSubContactList(DynamicList<wallSubContactInfo*>& contactList);
-
-    // void addSCToEnd
-    // (
-    //     std::vector<std::shared_ptr<wallSubContactInfo>>& sCW
-    // )
-    // {
-    //     subCList_.push_back(sCW);
-    // }
-
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

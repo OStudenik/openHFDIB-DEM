@@ -92,13 +92,12 @@ bool detectWallContact_ArbShape(
     wallContactInfo& wallCntInfo
 )
 {
-    bool isContact(false);
-    if(wallCntInfo.detectWallContact())
+    if(wallCntInfo.detectWallContact(wallMatInfo::getWallPatches()))
     {
         wallCntInfo.findContactAreas();
-        isContact = true;
+        return true;
     }
-    return(isContact);
+    return false;
 }
 //---------------------------------------------------------------------------//
 bool detectWallContact_Sphere(

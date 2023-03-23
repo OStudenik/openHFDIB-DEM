@@ -324,46 +324,6 @@ bool stlBased::limitFinalSubVolume
     }
 
     return false;
-    // Info << "sv: " << sv << " shapesIn size: " << shapesIn->size() << endl;
-    // Info << "intersectionPoints: " << intersectionPoints << endl;
-
-    // scalar nearestDistSqr = GREAT;
-    // label minIndex = -1;
-    // closestPoint = point::max;
-
-    // const indexedOctree<treeDataTriSurface>& tree = triSurfSearch_->tree();
-    // treeDataTriSurface::findNearestOp nearestOp(tree);
-    // nearestOp(
-    //     *shapesIn,
-    //     sv.midpoint(),
-    //     nearestDistSqr,
-    //     minIndex,
-    //     closestPoint
-    // );
-
-    // if (minIndex == -1)
-    // {
-    //     Info << "minIndex is -1" << endl;
-    //     return false;
-    // }
-
-    // normal = (*triSurf_)[minIndex].area(triSurf_->points());
-
-    // if (intersectionPoints.size() == 0)
-    // {
-    //     Info << "intersectionPoints is empty" << endl;
-    //     return false;
-    // }
-
-    // forAll(intersectionPoints, i)
-    // {
-    //     closestPoint += intersectionPoints[i];
-    // }
-    // closestPoint /= intersectionPoints.size();
-
-    // Info << "cIb: " << cIb << " sv: " << sv << " normal: " << normal << " nearest: " << closestPoint << " intersectionPoints: " << intersectionPoints << endl;
-
-    // return true;
 }
 //---------------------------------------------------------------------------//
 void stlBased::getIntersectionPoints
