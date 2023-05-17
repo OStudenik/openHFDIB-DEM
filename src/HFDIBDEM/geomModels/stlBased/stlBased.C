@@ -177,11 +177,13 @@ void stlBased::bodyRotatePoints
     triSurfSearch_.reset(new triSurfaceSearch(triSurf_()));
 }
 //---------------------------------------------------------------------------//
-void stlBased::synchronPos()
+void stlBased::synchronPos(label owner)
 {
     PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
 
-    if (owner_ == Pstream::myProcNo())
+    owner = (owner == -1) ? owner_ : owner;
+
+    if (owner == Pstream::myProcNo())
     {
         for (label proci = 0; proci < Pstream::nProcs(); proci++)
         {
@@ -192,7 +194,7 @@ void stlBased::synchronPos()
 
     pBufs.finishedSends();
     // move body to points calculated by owner_
-    UIPstream recv(owner_, pBufs);
+    UIPstream recv(owner, pBufs);
     pointField bodyPoints (recv);
 
     // move mesh
@@ -322,46 +324,6 @@ bool stlBased::limitFinalSubVolume
     }
 
     return false;
-    // Info << "sv: " << sv << " shapesIn size: " << shapesIn->size() << endl;
-    // Info << "intersectionPoints: " << intersectionPoints << endl;
-
-    // scalar nearestDistSqr = GREAT;
-    // label minIndex = -1;
-    // closestPoint = point::max;
-
-    // const indexedOctree<treeDataTriSurface>& tree = triSurfSearch_->tree();
-    // treeDataTriSurface::findNearestOp nearestOp(tree);
-    // nearestOp(
-    //     *shapesIn,
-    //     sv.midpoint(),
-    //     nearestDistSqr,
-    //     minIndex,
-    //     closestPoint
-    // );
-
-    // if (minIndex == -1)
-    // {
-    //     Info << "minIndex is -1" << endl;
-    //     return false;
-    // }
-
-    // normal = (*triSurf_)[minIndex].area(triSurf_->points());
-
-    // if (intersectionPoints.size() == 0)
-    // {
-    //     Info << "intersectionPoints is empty" << endl;
-    //     return false;
-    // }
-
-    // forAll(intersectionPoints, i)
-    // {
-    //     closestPoint += intersectionPoints[i];
-    // }
-    // closestPoint /= intersectionPoints.size();
-
-    // Info << "cIb: " << cIb << " sv: " << sv << " normal: " << normal << " nearest: " << closestPoint << " intersectionPoints: " << intersectionPoints << endl;
-
-    // return true;
 }
 //---------------------------------------------------------------------------//
 void stlBased::getIntersectionPoints

@@ -46,8 +46,7 @@ Contributors
 #include "fvCFD.H"
 #include "triSurfaceMesh.H"
 
-#include "contactType.H"
-#include "subVolume.H"
+#include "IGeomModelVM.H"
 #include "verletPoint.H"
 
 #include "outputHFDIBDEM.H"
@@ -74,7 +73,7 @@ namespace Foam
         }
     }
 
-    class geomModel
+    class geomModel : public IGeomModelVM
     {
 
         private:
@@ -229,7 +228,7 @@ namespace Foam
             return bound;
         }
 
-        virtual void synchronPos()
+        virtual void synchronPos(label owner = -1)
         {
             InfoH << iB_Info << "-- geomModelMessage-- "
                 << "notIplemented"<<endl;

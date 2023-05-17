@@ -1,4 +1,5 @@
 geomModels/geomModel.C
+geomModels/wallModel.C
 geomModels/stlBased/stlBased.C
 geomModels/stlBased/convexBody.C
 geomModels/stlBased/nonConvexBody.C

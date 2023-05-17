@@ -121,8 +121,8 @@ class virtualMesh
     typedef DynamicList<point> DynamicPointList;
     typedef HashSet<vector,Hash<vector>> vectorHashSet;
 
-    geomModel& cGeomModel_;
-    geomModel& tGeomModel_;
+    IGeomModelVM& cGeomModel_;
+    IGeomModelVM& tGeomModel_;
 
     virtualMeshInfo& vMeshInfo_;
 
@@ -137,8 +137,8 @@ class virtualMesh
     virtualMesh
     (
         virtualMeshInfo& vMeshInfo,
-        geomModel& cGeomModel_,
-        geomModel& tGeomModel_
+        IGeomModelVM& cGeomModel_,
+        IGeomModelVM& tGeomModel_
     );
 
 

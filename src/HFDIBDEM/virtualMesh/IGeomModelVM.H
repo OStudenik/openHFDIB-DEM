@@ -25,27 +25,57 @@ License
 InNamspace
     Foam
 
+Description
+    interface for geometric model in virtual mesh
+
 Contributors
     Martin Isoz (2019-*), Martin Kotouč Šourek (2019-*),
     Ondřej Studeník (2020-*)
 \*---------------------------------------------------------------------------*/
-#include "interpolationInfo.H"
 
-using namespace Foam;
+#ifndef IGeomModelVM_H
+#define IGeomModelVM_H
 
-// autoPtr<vectorField> interpolationInfo::surfNorm_;
+#include "contactType.H"
+#include "subVolume.H"
 
-//---------------------------------------------------------------------------//
-interpolationInfo::interpolationInfo
-(
-    const Foam::fvMesh& mesh,
-    std::shared_ptr<geomModel>& gModel
-)
-:
-mesh_(mesh),
-geomModel_(gModel)
-{}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-interpolationInfo::~interpolationInfo()
-{}
-//---------------------------------------------------------------------------//
+namespace Foam
+{
+
+/*---------------------------------------------------------------------------*\
+                        Interface IGeomModelVM Declaration
+\*---------------------------------------------------------------------------*/
+class IGeomModelVM
+{
+    public:
+
+    virtual ~IGeomModelVM() {}
+
+    virtual volumeType getVolumeType(subVolume& sv, bool cIb) = 0;
+    virtual bool limitFinalSubVolume
+    (
+        const subVolume& sv,
+        bool cIb,
+        boundBox& limBBox
+    ) = 0;
+    virtual scalar getDC() = 0;
+    virtual void getClosestPointAndNormal
+    (
+        const point& startPoint,
+        const vector& span,
+        point& closestPoint,
+        vector& normal
+    ) = 0;
+};
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
+
+// ************************************************************************* //

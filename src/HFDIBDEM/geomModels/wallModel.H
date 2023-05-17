@@ -26,26 +26,21 @@ InNamspace
     Foam
 
 Description
-    class for storage of contact variables
+    class for the wall contact geomModel
 
 SourceFiles
-    ibContactClass.C
+    wallModel.C
 
 Contributors
     Martin Isoz (2019-*), Martin Kotouč Šourek (2019-*),
     Ondřej Studeník (2020-*)
 \*---------------------------------------------------------------------------*/
 
-#ifndef ibContactClass_H
-#define ibContactClass_H
+#ifndef wallModel_H
+#define wallModel_H
 
-#include "dictionary.H"
-#include "fvCFD.H"
-
-#include "geomModel.H"
-#include "ibContactVars.H"
-#include "wallContactVars.H"
-#include "materialInfo.H"
+#include "IGeomModelVM.H"
+#include "plane.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -53,103 +48,58 @@ namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class ibContactClass Declaration
+                        Class wallModel Declaration
 \*---------------------------------------------------------------------------*/
-
-class ibContactClass
+class wallModel : public IGeomModelVM
 {
     private:
 
-    typedef DynamicList<label> DynamicLabelList;
-    typedef DynamicList<scalar> DynamicScalarList;
-    typedef DynamicList<vector> DynamicVectorList;
-    typedef DynamicList<point> DynamicPointList;
-
-    protected:
-
-    std::shared_ptr<geomModel>& geomModel_;
-
-    // is the particle in contact with wall
-    bool    isInWallContact_;
-
-    bool inContactWithStatic_;
-
-    label timeStepsInContWStatic_;
-
-    const materialInfo& matInfo_;
+    List<plane> contactPlanes_;
 
     public:
 
     // Constructors ------------------------------------------------
-    ibContactClass
-    (
-        std::shared_ptr<geomModel>& geomModel,
-        const string& material
-    );
 
-    ibContactClass
+    wallModel
     (
-        const ibContactClass& other
+        List<string> contactPatches
     );
 
     // Destructors -------------------------------------------------
-    ~ibContactClass();
+    virtual ~wallModel();
 
-    geomModel& getGeomModel()
+    volumeType getPlaneVolumeType
+    (
+        const plane& pl,
+        const subVolume& sv
+    );
+
+    virtual volumeType getVolumeType(
+        subVolume& sv,
+        bool cIb
+    ) final override;
+
+    virtual bool limitFinalSubVolume
+    (
+        const subVolume& sv,
+        bool cIb,
+        boundBox& limBBox
+    ) final override;
+
+    virtual scalar getDC() final override
     {
-        return *geomModel_;
+        return 1.0;
     }
 
-    std::shared_ptr<geomModel> getGeomModelPtr()
-    {
-        return geomModel_;
-    }
-
-    const bool& checkWallContact() const
-    {
-        return isInWallContact_;
-    }
-
-    void setWallContact(bool inContact)
-    {
-        isInWallContact_ = inContact;
-    }
-
-    List<DynamicLabelList>& getSurfCells()
-    {
-        return geomModel_->getSurfaceCellList();
-    }
-
-    List<DynamicLabelList>& getIntCells()
-    {
-        return geomModel_->getInternalCellList();
-    }
-
-    const materialInfo& getMatInfo()
-    {
-        return matInfo_;
-    }
-
-    const bool& checkInContactWithStatic() const
-    {
-        return inContactWithStatic_;
-    }
-
-    void inContactWithStatic(bool inContact)
-    {
-        inContactWithStatic_ = inContact;
-    }
-
-    const label& getTimeStepsInContWStatic() const
-    {
-        return timeStepsInContWStatic_;
-    }
-
-    void setTimeStepsInContWStatic(label setter)
-    {
-        timeStepsInContWStatic_ = setter;
-    }
+    virtual void getClosestPointAndNormal
+    (
+        const point& startPoint,
+        const vector& span,
+        point& closestPoint,
+        vector& normal
+    ) final override;
 };
+
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
