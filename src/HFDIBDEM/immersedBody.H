@@ -324,6 +324,8 @@ namespace Foam
 
         void recreateBodyField(volScalarField& body, volScalarField& refineF);
 
+        void printBodyInfo();
+
         // update imposed vector field
         void updateVectorField
         (

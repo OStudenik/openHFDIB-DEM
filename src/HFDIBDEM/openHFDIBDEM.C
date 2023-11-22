@@ -865,6 +865,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         forAll (immersedBodies_,ib)
         {
             immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
+            immersedBodies_[ib].printBodyInfo();
 
             immersedBodies_[ib].computeBodyCoNumber();
             if (maxCoNum < immersedBodies_[ib].getCoNum())
