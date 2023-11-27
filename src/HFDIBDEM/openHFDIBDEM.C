@@ -1111,6 +1111,7 @@ void openHFDIBDEM::writeFirtsTimeBodiesInfo()
 {
     word curOutDir(recordOutDir_ + "/" + mesh_.time().timeName());
     bool checkExistance(false);
+    reduce(checkExistance,orOp<bool>());
     if(!recordSimulation_ || isDir(curOutDir))
         return;
 
