@@ -190,6 +190,14 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
     }
     
     
+    if(demDic.found("useBoundBoxWallContact"))
+    {
+        wallPlaneInfo::setUseWallBoundBox(readBool(demDic.lookup("useBoundBoxWallContact")));
+    }
+    else
+    {
+         wallPlaneInfo::setUseWallBoundBox(false);
+    }
 
     dictionary patchDic = demDic.subDict("collisionPatches");
     List<word> patchNames = patchDic.toc();
@@ -198,6 +206,14 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
         word patchMaterial = patchDic.subDict(patchNames[patchI]).lookup("material");
         vector patchNVec = patchDic.subDict(patchNames[patchI]).lookup("nVec");
         vector planePoint = patchDic.subDict(patchNames[patchI]).lookup("planePoint");
+
+        if(wallPlaneInfo::getUseWallBoundBox())
+        {
+            vector patchMin = patchDic.subDict(patchNames[patchI]).lookup("minBound");
+            vector patchMax = patchDic.subDict(patchNames[patchI]).lookup("maxBound");
+            boundBox wallBoundBox(patchMin,patchMax);
+            wallPlaneInfo::wallPlaneBoundBox_insert(patchNames[patchI],wallBoundBox);
+        }
 
         wallPlaneInfo::wallPlaneInfo_insert(
             patchNames[patchI],
@@ -906,21 +922,22 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         {
             immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
             immersedBodies_[ib].printBodyInfo();
-            immersedBodies_[ib].computeBodyCoNumber();
-            if (maxCoNum < immersedBodies_[ib].getCoNum())
-            {
-                maxCoNum = immersedBodies_[ib].getCoNum();
-                bodyId = ib;
-            }
+            // immersedBodies_[ib].computeBodyCoNumber();
+            // if (maxCoNum < immersedBodies_[ib].getCoNum())
+            // {
+            //     maxCoNum = immersedBodies_[ib].getCoNum();
+            //     bodyId = ib;
+            // }
+            
         }
-        InfoH << basic_Info << "Max CoNum = " << maxCoNum << " at body " << bodyId << endl;
+        // InfoH << basic_Info << "Max CoNum = " << maxCoNum << " at body " << bodyId << endl;
 
         pos += step;
         
         if (pos + step + SMALL >= 1)
             step = 1 - pos;
 //OS Time effitiency Testing            
-        demItegrationTime_ = DEMIntergrationRun.timeIncrement(); 
+        demItegrationTime_ += DEMIntergrationRun.timeIncrement(); 
 //OS Time effitiency Testing                   
     }
 }

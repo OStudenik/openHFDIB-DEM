@@ -121,6 +121,33 @@ bool detectWallContact_Sphere(
             )
         );
 
+        vector cCenter(wallCntInfo.getcClass().getGeomModel().getCoM());
+        List<string>& contactPatches = wallCntInfo.getContactPatches();
+        List<string> contactPatchesTmp;
+        forAll(contactPatches, patchI)
+        {
+            List<vector> planeInfo = wallPlaneInfo::getWallPlaneInfo()[contactPatches[patchI]];
+            plane p(planeInfo[1], planeInfo[0]);
+            point nearestPoint = p.nearestPoint(cCenter);
+            if(mag(cCenter - nearestPoint)-wallCntInfo.getcClass().getGeomModel().getDC()/2 > 0)
+            {
+                continue;
+            }
+            if(wallPlaneInfo::getUseWallBoundBox() && !wallPlaneInfo::getWallPlaneBoundBox()[contactPatches[patchI]].contains(cCenter))
+            {
+                continue;
+            }
+
+            contactPatchesTmp.append(contactPatches[patchI]);
+        }
+
+        contactPatches = contactPatchesTmp;
+        
+        if(contactPatches.size() == 0)
+        {
+            return false;
+        }
+
         return true;
     }
 

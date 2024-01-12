@@ -180,7 +180,12 @@ bool wallContactInfo::detectWallContact(
     {
         forAll(wallPatchNames,wP)
         {
-            if(!isInsidePlane(bBpoints[bBP], wallPatchNames[wP], wallPatches))
+            if(!isInsidePlane(bBpoints[bBP], wallPatchNames[wP], wallPatches) && !wallPlaneInfo::getUseWallBoundBox())
+            {
+                isPatchInContact[wP] = true;
+                bBContact = true;
+            }
+            else if(!isInsidePlane(bBpoints[bBP], wallPatchNames[wP], wallPatches) && wallPlaneInfo::getUseWallBoundBox() && bodyBB.overlaps(wallPlaneInfo::getWallPlaneBoundBox()[wallPatchNames[wP]]))
             {
                 isPatchInContact[wP] = true;
                 bBContact = true;
@@ -190,10 +195,15 @@ bool wallContactInfo::detectWallContact(
 
     forAll(isPatchInContact,wP)
     {
-        if(isPatchInContact[wP])
+        if(isPatchInContact[wP] && !wallPlaneInfo::getUseWallBoundBox())
         {
             contactPatches_.append(wallPatchNames[wP]);
         }
+        else if(isPatchInContact[wP] && wallPlaneInfo::getUseWallBoundBox() && bodyBB.overlaps(wallPlaneInfo::getWallPlaneBoundBox()[wallPatchNames[wP]]))
+        {
+            contactPatches_.append(wallPatchNames[wP]);
+        }
+        
     }
 
     return bBContact;
@@ -317,6 +327,26 @@ void wallContactInfo::findContactAreas()
                                     }
                                 }
                                 planeBox = boundBox(newBBPoints,false);
+                                // Info<<" -- PossibleProblem : "<< contactPatches_[wP2] <<endl;
+                                // Info<<" -- PossibleProblem body BB: "<< wallPlaneInfo::getWallPlaneBoundBox()[contactPatches_[wP2]] <<endl;
+                                // Info<<" -- PossibleProblem plane BB: "<< planeBox <<endl;   
+                                // Info<<" -- InterSect : " << planeBox.overlaps(wallPlaneInfo::getWallPlaneBoundBox()[contactPatches_[wP2]]) <<endl;
+
+                                if(wallPlaneInfo::getWallPlaneBoundBox().found(contactPatches_[wP2]))
+                                {
+                                    if(wallPlaneInfo::getUseWallBoundBox() && planeBox.overlaps(wallPlaneInfo::getWallPlaneBoundBox()[contactPatches_[wP2]]))
+                                    {
+                                        scalar minX = max(planeBox.min()[0],wallPlaneInfo::getWallPlaneBoundBox()[contactPatches_[wP2]].min()[0]);
+                                        scalar minY = max(planeBox.min()[1],wallPlaneInfo::getWallPlaneBoundBox()[contactPatches_[wP2]].min()[1]);
+                                        scalar minZ = max(planeBox.min()[2],wallPlaneInfo::getWallPlaneBoundBox()[contactPatches_[wP2]].min()[2]);
+
+                                        scalar maxX = min(planeBox.max()[0],wallPlaneInfo::getWallPlaneBoundBox()[contactPatches_[wP2]].max()[0]);
+                                        scalar maxY = min(planeBox.max()[1],wallPlaneInfo::getWallPlaneBoundBox()[contactPatches_[wP2]].max()[1]);
+                                        scalar maxZ = min(planeBox.max()[2],wallPlaneInfo::getWallPlaneBoundBox()[contactPatches_[wP2]].max()[2]);
+
+                                        planeBox = boundBox(vector(minX,minY,minZ),vector(maxX,maxY,maxZ));
+                                    }
+                                }
                             }
 
                         }
@@ -331,6 +361,7 @@ void wallContactInfo::findContactAreas()
             // InfoH << DEM_Info <<" -- SM sMExportList.size() : " << sMExportList.size() << endl;
             // InfoH << DEM_Info <<" -- SM sMInternal.size()   : " << sMInternal.size() << endl;
             // InfoH << DEM_Info <<" -- SM emptyCells.size()   : " << emptyCells << endl;
+
             setNewSubContact(sMExportList,sMPlaneList,contactPatches,sMInternal,cBbox);
         }
     }
