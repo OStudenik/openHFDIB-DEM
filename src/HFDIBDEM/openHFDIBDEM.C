@@ -785,8 +785,8 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                         cIb.getibContactClass().setWallContact(true);
                         cIb.getibContactClass().inContactWithStatic(true);
                         wallContactIB.append(bodyId);
-                        // wallContactIBTable.insert(bodyId,wallContactIB.size()-1);
-                        // cIb.getWallCntInfo().registerSubContactList(wallContactList);
+                        wallContactIBTable.insert(bodyId,wallContactIB.size()-1);
+                        cIb.getWallCntInfo().registerSubContactList(wallContactList);
                     }
                 }
             }
