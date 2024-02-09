@@ -156,11 +156,15 @@ std::shared_ptr<virtualMeshInfo>& prtSubContactInfo::getVMInfo()
 //---------------------------------------------------------------------------//
 void prtSubContactInfo::syncData()
 {
+                
+    // Info << "CheckPoint #9.401" << endl; 
     reduce(outForce_.first().F, sumOp<vector>());
     reduce(outForce_.first().T, sumOp<vector>());
     reduce(outForce_.second().F, sumOp<vector>());
     reduce(outForce_.second().T, sumOp<vector>());
-
+    // Info << "CheckPoint #9.402| contact Resolved : " << contactResolved_<< endl; 
+    // Info << "outForce.F: " << outForce_.first().F << endl;
+    // Info << "outForce.F: " << outForce_.second().F << endl;
 
     if (vmInfo_)
     {
@@ -174,6 +178,7 @@ void prtSubContactInfo::syncData()
         reduce(reducePoint, sumOp<vector>());
         vmInfo_->startingPoint.reset(new point(reducePoint));
     }
+    // Info << "CheckPoint #9.403" << endl; 
 }
 //---------------------------------------------------------------------------//
 

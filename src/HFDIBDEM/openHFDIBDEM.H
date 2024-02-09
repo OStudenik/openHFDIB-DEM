@@ -128,22 +128,44 @@ namespace Foam
     bool recordFirstTimeStep_ = false;
     word recordOutDir_;
 
+    // List<vector> bodiesPositionList_;
+
     public:
 
-    // Constructors ----------------------------------------------------
+    // Constructors ----------------------------------------------------/grig1/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/applications/solvers/HFDIBDEMFoam
     openHFDIBDEM(const Foam::fvMesh& mesh);
 
     // Destructors -----------------------------------------------------
     ~openHFDIBDEM();
 
     // Public methods --------------------------------------------------
+    scalar checkForCyclic_ = 0.0;
+    scalar updateMovementAndStuff_ = 0.0;
+    scalar updateMovementTime_ = 0.0;
+    scalar moveIBTime_ = 0.0;
+    scalar updateVerletList_ = 0.0;
+    scalar moveBodySyncTime_ = 0.0;
+    scalar calcMoveBodyTime_ = 0.0;
+    scalar computeCONumTime_ =0.0;
     scalar wallContactTime_ = 0.0;
     scalar wallContactParallelTime_ = 0.0;
     scalar wallContactReduceTime_ = 0.0;
     scalar prtContactTime_ = 0.0;
     scalar prtContactParallelTime_ = 0.0;
     scalar prtContactReduceTime_ = 0.0;
+    scalar syncResultsTime_ = 0.0;
     scalar demItegrationTime_ = 0.0;
+    scalar syncResultTime_sortContactList_ = 0.0;
+    scalar syncResultTime_checkContactResolved_ = 0.0;
+    scalar syncResultTime_syncDataCost_ = 0.0;
+    scalar syncParticleContactInfoTime_ = 0.0;
+
+    scalar detectWallContactTime_ = 0.0;
+    scalar resolveWallContactTime_ = 0.0;
+
+    scalar reduceStatisticalDataWallTime_ = 0.0;
+    scalar reduceStatisticalDataPrtTime_ = 0.0;
+    scalar pureDetectWallContactTime_ = 0.0;
 
     void initialize(volScalarField& body,volVectorField& U,volScalarField& refineF,label recomputeM0, word runTime);
 

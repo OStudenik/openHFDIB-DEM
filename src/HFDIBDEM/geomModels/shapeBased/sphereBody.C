@@ -198,10 +198,8 @@ label sphereBody::getCellInBody
 void sphereBody::synchronPos(label owner)
 {
     PstreamBuffers pBufs(Pstream::commsTypes::nonBlocking);
-
     owner = (owner == -1) ? owner_ : owner;
-
-    if (owner == Pstream::myProcNo())
+    if (Pstream::myProcNo() == 0)
     {
         for (label proci = 0; proci < Pstream::nProcs(); proci++)
         {
@@ -209,10 +207,9 @@ void sphereBody::synchronPos(label owner)
             send << position_;
         }
     }
-
     pBufs.finishedSends();
     // move body to points calculated by owner_
-    UIPstream recv(owner, pBufs);
+    UIPstream recv(0, pBufs);
     vector pos (recv);
 
     // move mesh

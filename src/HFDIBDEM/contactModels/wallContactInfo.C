@@ -235,6 +235,7 @@ void wallContactInfo::findContactAreas()
             List<Tuple2<point,boundBox>> sMPlaneList;
             List<Tuple2<point,boundBox>> sMInternal;
 
+            // boundBox cBbox(overallContactPoints,false);
             boundBox cBbox;
             forAll(possibleSMContact[SC],item)
             {

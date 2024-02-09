@@ -183,7 +183,7 @@ void stlBased::synchronPos(label owner)
 
     owner = (owner == -1) ? owner_ : owner;
 
-    if (owner == Pstream::myProcNo())
+    if (Pstream::myProcNo() == 0)
     {
         for (label proci = 0; proci < Pstream::nProcs(); proci++)
         {
@@ -194,7 +194,7 @@ void stlBased::synchronPos(label owner)
 
     pBufs.finishedSends();
     // move body to points calculated by owner_
-    UIPstream recv(owner, pBufs);
+    UIPstream recv(0, pBufs);
     pointField bodyPoints (recv);
 
     // move mesh
@@ -499,5 +499,12 @@ void stlBased::intersectBb
     {
         intersectionPoints.append(pInter);
     }
+}
+//---------------------------------------------------------------------------//
+void stlBased::setBodyPosition(pointField pos)
+{
+    bodySurfMesh_.movePoints(pos);
+    triSurf_.reset(new triSurface(bodySurfMesh_));
+    triSurfSearch_.reset(new triSurfaceSearch(triSurf_()));
 }
 //---------------------------------------------------------------------------//

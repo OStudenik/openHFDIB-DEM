@@ -152,34 +152,40 @@ int main(int argc, char *argv[])
         << "postUpdateTime      = " << postUpdateTime_      << " s \n"
         << "addRemoveTime       = " << addRemoveTime_       << " s \n"
         << "updateDEMTime       = " << updateDEMTime_       << " s \n"
+        << "   checkForCyclic_          = " << HFDIBDEM.checkForCyclic_        << " s \n"
+        << "   updateMovementAndStuff_  = " << HFDIBDEM.updateMovementAndStuff_<< " s \n"
+        << "   updateVerletList_        = " << HFDIBDEM.updateVerletList_       << " s \n"
         << "   wallContactTime_         = " << HFDIBDEM.wallContactTime_        << " s \n"
         << "   wallContactParallelTime_ = " << HFDIBDEM.wallContactParallelTime_<< " s \n"
         << "   wallContactSCTime_       = " << HFDIBDEM.wallContactReduceTime_  << " s \n"
+
+        << "   detectWallContactTime_        = " << HFDIBDEM.detectWallContactTime_  << " s \n"
+        << "   pureDetectWallContactTime_    = " << HFDIBDEM.pureDetectWallContactTime_  << " s \n"
+        << "   resolveWallContactTime_       = " << HFDIBDEM.resolveWallContactTime_  << " s \n"
+
         << "   prtContactTime_          = " << HFDIBDEM.prtContactTime_         << " s \n"
         << "   prtContactParallelTime_  = " << HFDIBDEM.prtContactParallelTime_ << " s \n"
         << "   prtContactSCTime_        = " << HFDIBDEM.prtContactReduceTime_   << " s \n"
+        << "   syncParticleContactInfoTime_             = " << HFDIBDEM.syncParticleContactInfoTime_   << " s \n"
+        // 
+        << "   syncResultsTime_         = " << HFDIBDEM.syncResultsTime_        << " s \n"
+        << "   syncResultTime_sortContactList_          = " << HFDIBDEM.syncResultTime_sortContactList_        << " s \n"
+        << "   syncResultTime_checkContactResolved_     = " << HFDIBDEM.syncResultTime_checkContactResolved_    << " s \n"
+        << "   syncResultTime_syncDataCost_             = " << HFDIBDEM.syncResultTime_syncDataCost_            << " s \n"
         << "   demItegrationTime_       = " << HFDIBDEM.demItegrationTime_      << " s \n"
+        << "   reduceTime_              = " << HFDIBDEM.moveIBTime_      << " s \n"
+        << "   updateMovementTime_      = " << HFDIBDEM.updateMovementTime_      << " s \n"
+        << "   computeCONumTime_        = " << HFDIBDEM.computeCONumTime_      << " s \n"
+        << "   calcMoveBodyTime_        = " << HFDIBDEM.calcMoveBodyTime_      << " s \n"
+        << "   moveBodySyncTime_        = " << HFDIBDEM.moveBodySyncTime_      << " s \n"
+
+        << "   reduceStatisticalDataWallTime_        = " << HFDIBDEM.reduceStatisticalDataWallTime_      << " s \n"
+        << "   reduceStatisticalDataPrtTime_         = " << HFDIBDEM.reduceStatisticalDataPrtTime_      << " s \n"
+
+
         << "writeBodiesInfoTime = " << writeBodiesInfoTime_ << " s \n" << endl;
 
     }
-
-    Info<< "preUpdateTime       = " << preUpdateTime_       << " s \n"
-        << "createBodiesTime    = " << createBodiesTime_    << " s \n"
-        << "meshUpdateTime      = " << meshUpdateTime_      << " s \n"
-        << "meshChangingTime    = " << meshChangingTime_       << " s \n"
-        << "postUpdateTime      = " << postUpdateTime_      << " s \n"
-        << "addRemoveTime       = " << addRemoveTime_       << " s \n"
-        << "updateDEMTime       = " << updateDEMTime_       << " s \n"
-        << "   wallContactTime_         = " << HFDIBDEM.wallContactTime_        << " s \n"
-        << "   wallContactParallelTime_ = " << HFDIBDEM.wallContactParallelTime_<< " s \n"
-        << "   wallContactSCTime_       = " << HFDIBDEM.wallContactReduceTime_  << " s \n"
-        << "   prtContactTime_          = " << HFDIBDEM.prtContactTime_         << " s \n"
-        << "   prtContactParallelTime_  = " << HFDIBDEM.prtContactParallelTime_ << " s \n"
-        << "   prtContactSCTime_        = " << HFDIBDEM.prtContactReduceTime_   << " s \n"
-        << "   demItegrationTime_       = " << HFDIBDEM.demItegrationTime_      << " s \n"
-        << "writeBodiesInfoTime = " << writeBodiesInfoTime_ << " s \n" << endl;
-    Info<< "End\n" << endl;
-
     return 0;
 };
 

@@ -203,6 +203,8 @@ namespace Foam
         (
             scalar deltaT = -1.0
         );
+
+        void syncBodyPos();
         
         void printBodyInfo();
         
@@ -421,6 +423,11 @@ namespace Foam
         void inContactWithStatic(bool inContact)
         {
             ibContactClass_->inContactWithStatic(inContact);
+        }
+
+        forces& getFContact()
+        {
+            return FContact_;
         }
 
         void chceckBodyOp();

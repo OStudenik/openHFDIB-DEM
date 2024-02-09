@@ -224,6 +224,41 @@ void prtContactInfo::syncContactList()
 {
     std::vector<std::shared_ptr<prtSubContactInfo>> syncedContactList;
     // Sync the sub-contact list going through processors
+    if(cIbContactClass_.getGeomModel().getcType() == sphere && tIbContactClass_.getGeomModel().getcType() == sphere)
+    {
+        List<label> nConctactList(Pstream::nProcs());
+        // Pout << " contactList_.size() " << contactList_.size() << endl;
+        nConctactList[Pstream::myProcNo()] = contactList_.size();
+        // Pout << "nConctactList[Pstream::myProcNo()]: " << nConctactList[Pstream::myProcNo()] << endl;
+        // Pstream::gatherList(nConctactList,0);
+        // Pstream::scatterList(nConctactList,0);
+
+        // Pout << "nConctactList[Pstream::myProcNo()]: " << nConctactList[Pstream::myProcNo()] << endl;
+        // for (label procI = 0; procI < Pstream::nProcs(); procI++)
+        // {
+        //     label numOfCnts = 0;
+        //     if (procI == Pstream::myProcNo())
+        //     {
+        //         numOfCnts = contactList_.size();
+        //     }
+        //     reduce(numOfCnts, sumOp<label>());
+        //     for (label i = 0; i < nConctactList[procI]; i++)
+        //     {
+        //         syncedContactList.emplace_back(std::make_shared<prtSubContactInfo>
+        //             (contactPair_, physicalProperties_)
+        //         );
+        //     }
+        // }
+
+        for (label i = 0; i < nConctactList[Pstream::myProcNo()]; i++)
+        {
+            syncedContactList.emplace_back(std::make_shared<prtSubContactInfo>
+                (contactPair_, physicalProperties_));
+        }
+        contactList_.swap(syncedContactList);
+        return;
+    }
+    
     for (label procI = 0; procI < Pstream::nProcs(); procI++)
     {
         label numOfCnts = 0;
@@ -232,7 +267,6 @@ void prtContactInfo::syncContactList()
             numOfCnts = contactList_.size();
         }
         reduce(numOfCnts, sumOp<label>());
-
         for (label i = 0; i < numOfCnts; i++)
         {
             bool vmInfoValid = false;
@@ -273,6 +307,7 @@ void prtContactInfo::syncContactList()
                 );
             }
         }
+
     }
 
     contactList_.swap(syncedContactList);

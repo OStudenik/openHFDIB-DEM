@@ -617,6 +617,7 @@ void openHFDIBDEM::writeBodiesInfo()
 //---------------------------------------------------------------------------//
 void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
 {
+    clockTime checkForCycleContactRun;
     if (cyclicPlaneInfo::getCyclicPlaneInfo().size() > 0)
     {
         forAll (immersedBodies_,bodyId)
@@ -663,14 +664,26 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
             }
         }
     }
-
+    checkForCyclic_ += checkForCycleContactRun.timeIncrement();
     scalar deltaTime(mesh_.time().deltaT().value());
     scalar pos(0.0);
     scalar step(stepDEM_);
-    // scalar timeStep(step*deltaTime);
-
+    // scalar timeStep(step*deltaTivim me);
+    // list<Tuple2<label,contactType>>
+    List<DynamicList<vector>> bodiesPositionList(Pstream::nProcs());
+    List<DynamicList<pointField>> bodiesSTLPositionList(Pstream::nProcs());
+    // Infos <<bodiesPositionList.size() << endl;
+    HashTable <label,Tuple2<label, label>,Hash<Tuple2<label, label>>> syncOutForceKeyTable;
+    HashTable <label,Tuple2<label, label>,Hash<Tuple2<label, label>>> contactResolvedKeyTable;
+    HashTable <label,Tuple2<label, label>,Hash<Tuple2<label, label>>> contactSizesKeyTable;
+    HashTable <label,label,Hash<label>> wallContactIBTable;
+    bodiesPositionList[Pstream::myProcNo()].clear();
     while( pos < 1)
     {
+        bodiesPositionList[Pstream::myProcNo()].clear();
+        bodiesSTLPositionList[Pstream::myProcNo()].clear();
+        // Info <<bodiesPositionList.size() << endl;
+        // bodiesPositionList[Pstream::myProcNo()] = List<vector>(immersedBodies_.size());
         label possibleWallContacts(0);
         label resolvedWallContacts(0);
         label possiblePrtContacts(0);
@@ -681,19 +694,73 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
 
         InfoH << basic_Info << " DEM - CFD Time: "
             << mesh_.time().value() + deltaTime*pos << endl;
+        clockTime updateMovementAndMovement;
+        forAll (immersedBodies_,ib)
+        {
+            clockTime updateMovement;
+            immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
+            updateMovementTime_ += updateMovement.timeIncrement();
+        }
+        label iter = 0;
+        clockTime calcMoveIB;
+        // Info << "cP1" << endl;
+        forAll(immersedBodies_,iter)
+        {
+            if(Pstream::myProcNo() == 0 && immersedBodies_[iter].getGeomModel().getcType() == sphere)
+            {
+                immersedBodies_[iter].moveImmersedBody(deltaTime*step);
+                bodiesPositionList[Pstream::myProcNo()].append(immersedBodies_[iter].getGeomModel().getBodyPosition());
+            }
+
+            if(Pstream::myProcNo() == 0 && immersedBodies_[iter].getGeomModel().getcType() != sphere && immersedBodies_[iter].getGeomModel().getcType() != cluster)
+            {
+                immersedBodies_[iter].moveImmersedBody(deltaTime*step);
+                bodiesSTLPositionList[Pstream::myProcNo()].append(immersedBodies_[iter].getGeomModel().getSTLBodyPoints());
+            }
+
+        }
+        // Info << "cP2" << endl;
+        calcMoveBodyTime_ += calcMoveIB.timeIncrement();
+        clockTime reduceTime;
+        reduce(iter,maxOp<label>());
+        // Info << "cP3" << endl;
+        Pstream::gatherList(bodiesPositionList,0);
+        Pstream::scatterList(bodiesPositionList,0);
+
+        Pstream::gatherList(bodiesSTLPositionList,0);
+        Pstream::scatterList(bodiesSTLPositionList,0);
+        // Info << "cP4" << endl;
+        moveIBTime_ += reduceTime.timeIncrement();
+        clockTime moveIBSync;
 
         forAll (immersedBodies_,ib)
         {
-            immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
-            immersedBodies_[ib].moveImmersedBody(deltaTime*step);
+            if(immersedBodies_[ib].getGeomModel().getcType() == sphere)
+            {
+                immersedBodies_[ib].getGeomModel().setBodyPosition(bodiesPositionList[0][ib]);
+            }
+            if(immersedBodies_[ib].getGeomModel().getcType() != sphere && immersedBodies_[iter].getGeomModel().getcType() != cluster)
+            {
+                immersedBodies_[ib].getGeomModel().setBodyPosition(bodiesSTLPositionList[0][ib]);
+            }
         }
+        moveBodySyncTime_ += moveIBSync.timeIncrement();
 
+        bodiesPositionList[Pstream::myProcNo()].clear();
+        bodiesSTLPositionList[Pstream::myProcNo()].clear();
+        // Info << "cP5" << endl;
+        updateMovementAndStuff_ += updateMovementAndMovement.timeIncrement();
+        clockTime updateVerletListRun;
         verletList_.update(immersedBodies_);
+        updateVerletList_ += updateVerletListRun.timeIncrement();
 //OS Time effitiency Testing    
         clockTime wallContactStopWatch;
 //OS Time effitiency Testing
         DynamicLabelList wallContactIB;
         DynamicList<wallSubContactInfo*> wallContactList;
+        // Info << "CheckPoint #1" << endl;
+        wallContactIBTable.clear();
+        clockTime detectWallContactClock;
         forAll (immersedBodies_,bodyId)
         {
             immersedBody& cIb(immersedBodies_[bodyId]);
@@ -705,22 +772,31 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                 if(cIb.getbodyOperation() != 0)
                 {
                     // detect wall contact
-                    if(detectWallContact
-                    (
-                        mesh_,
-                        cIb.getibContactClass(),
-                        cIb.getWallCntInfo()
-                    ))
+                    clockTime detectWallContactFunctionClock;
+                    bool isContact(detectWallContact
+                        (
+                            mesh_,
+                            cIb.getibContactClass(),
+                            cIb.getWallCntInfo()
+                    )); 
+                    pureDetectWallContactTime_ += detectWallContactFunctionClock.timeIncrement();
+                    if(isContact)
                     {
                         cIb.getibContactClass().setWallContact(true);
                         cIb.getibContactClass().inContactWithStatic(true);
                         wallContactIB.append(bodyId);
-                        cIb.getWallCntInfo().registerSubContactList(wallContactList);
+                        // wallContactIBTable.insert(bodyId,wallContactIB.size()-1);
+                        // cIb.getWallCntInfo().registerSubContactList(wallContactList);
                     }
                 }
             }
         }
+        detectWallContactTime_ += detectWallContactClock.timeIncrement();
+        // Info << "cP6" << endl;
         possibleWallContacts = wallContactIB.size();
+        // Info << " -- wallContactIB.size() : "<< wallContactIB.size() << " wallContactList.size() : "<<wallContactList.size() << endl;
+        List<bool> wallContactResolvedList(wallContactList.size(),false);
+        clockTime wallContactEvalClock;
         if(wallContactIB.size() > 0)
         {
             label wallContactPerProc(ceil(double(wallContactList.size())/Pstream::nProcs()));
@@ -737,61 +813,83 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                 resolvedWallContacts++;
                 wallSubContactInfo* sCW = wallContactList[assignProc];
                 immersedBody& cIb(immersedBodies_[sCW->getBodyId()]);
-                sCW->setResolvedContact(solveWallContact(
+                bool resolved(solveWallContact(
                     mesh_,
                     cIb.getWallCntInfo(),
                     deltaTime*step,
                     *sCW
                     ));
+                sCW->setResolvedContact(resolved);
+                wallContactResolvedList[assignProc] += resolved;
             }
-
+            // Info << "CheckPoint #3" << endl;
             //OS Time effitiency Testing                
             wallContactParallelTime_ += wallContactParallelRun.timeIncrement();
             clockTime wallContactSCRun;
             //OS Time effitiency Testing 
+            // Info << "CheckPoint #4" << endl;
+            reduce(wallContactResolvedList,sumOp<List<bool>>());
+
+            List<vector> iBodyOutForceList(wallContactIB.size(),vector::zero);
+            List<vector> iBodyOutTorqueList(wallContactIB.size(),vector::zero);
+
+            forAll (wallContactList,iB)
+            {
+                wallSubContactInfo* sC = wallContactList[iB];
+                label bodyId(sC->getBodyId());
+                if(wallContactIBTable.found(bodyId))
+                {
+                    label cKey(wallContactIBTable[bodyId]);
+                    if(wallContactResolvedList[iB])
+                    {
+                        iBodyOutForceList[cKey] += sC->getOutForce().F;
+                        iBodyOutTorqueList[cKey] += sC->getOutForce().T;
+                    }
+                }
+                
+            }
+
+            reduce(iBodyOutForceList,sumOp<List<vector>>());
+            reduce(iBodyOutTorqueList,sumOp<List<vector>>());
 
             forAll (wallContactIB,iB)
             {
                 immersedBody& cIb(immersedBodies_[wallContactIB[iB]]);
-
-                std::vector<std::shared_ptr<wallSubContactInfo>>& subCList
-                    = cIb.getWallCntInfo().getWallSCList();
-
-                for(auto sC : subCList)
-                {
-                    sC->syncContactResolve();
-                    if(sC->getContactResolved())
-                    {
-                        sC->syncData();
-
-                        cIb.updateContactForces(
-                            sC->getOutForce()
-                        );
-                    }
-                }
+                forces cF;
+                cF.F = iBodyOutForceList[iB];
+                cF.T = iBodyOutTorqueList[iB];
+                cIb.updateContactForces(cF);
                 cIb.getWallCntInfo().clearOldContact();
             }
             
             //OS Time effitiency Testing                
-            
             wallContactReduceTime_ += wallContactSCRun.timeIncrement();
             //OS Time effitiency Testing 
         }
+        resolveWallContactTime_ += wallContactEvalClock.timeIncrement();
+        // Info << "CheckPoint #5" << endl;
         wallContactList.clear();
         wallContactIB.clear();
+        // Info << "cP7" << endl;
+        wallContactTime_ += wallContactStopWatch.timeIncrement();
+        clockTime reduceStatisticalDataWall;
         reduce(resolvedWallContacts,sumOp<label>());
         InfoH << basic_Info << " -- Possible Wall Contacts: " << possibleWallContacts
             << " Resolved Wall Contacts: " << resolvedWallContacts 
             << " contactPerProc : " << ceil(possibleWallContacts/Pstream::nProcs()) << endl;
-
-        wallContactTime_ += wallContactStopWatch.timeIncrement();
+        // Info << "CheckPoint #6" << endl;
+        reduceStatisticalDataWallTime_ += reduceStatisticalDataWall.timeIncrement();
+        
 //OS Time effitiency Testing        
         clockTime particleContactStopWatch;
         clockTime particleContactSCRun;
 //OS Time effitiency Testing
         // Pout <<" Survived 3 " << endl;
+        // Info << "CPoint #2" << endl;
         DynamicList<prtSubContactInfo*> contactList;
         // check only pairs whose bounding boxes are intersected for the contact
+        // Info << "CheckPoint ;#7" << endl;
+        label vListSize(0);
         for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
         {
             const Tuple2<label, label> cPair = Tuple2<label, label>(it->first, it->second);
@@ -805,6 +903,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
             if((immersedBodies_[cInd].getIsActive() && immersedBodies_[tInd].getIsActive())
                 &&
                 !(cStatic && tStatic)
+
             )
             {
                 if(cStatic)
@@ -816,23 +915,40 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                 prtContactInfo& prtcInfo(getPrtcInfo(
                     cPair)
                 );
-
+// 
                 prtcInfo.clearData();
                 getContacts(
                     mesh_,
                     prtcInfo
                 );
-
-                prtcInfo.syncContactList();
-
+                // Pout << " -- cpair :"<< cPair <<" - prtcInfo.getContactList().size() : " << prtcInfo.getContactListSize() << endl;
+                clockTime prtcSyncInfo;
+                // prtcInfo.syncContactList();
+                syncParticleContactInfoTime_ += prtcSyncInfo.timeIncrement();
                 prtcInfo.registerContactList(contactList);
             }
+            vListSize++;
         }
+        // Info << "CPoint #3" << endl;
 //OS Time effitiency Testing
+        // Info << "CheckPoint #8" << endl;
         prtContactReduceTime_ += particleContactSCRun.timeIncrement();
         clockTime particleContactParallelRun;
 //OS Time effitiency Testing 
+        // Info << "CPoint #4" << endl;
         possiblePrtContacts = contactList.size();      
+        // Info << "CheckPoint #5.0  possiblePrtContacts" << possiblePrtContacts << endl;
+
+        List<bool> contactResolved(contactList.size(),false);
+        // Info << "CPoint #5.1 -- contactResolved.size() : " << contactResolved.size()<<endl;
+        List<label> contactResolvedcKey(contactList.size(),0);
+        List<label> contactResolvedtKey(contactList.size(),0);
+        // Info << "CPoint #5.2 -- contactResolvedcKey.size() : " << contactResolvedcKey.size()<<endl;
+        // Info << "CPoint #5.3 -- contactResolvedtKey.size() : " << contactResolvedtKey.size()<<endl;
+        bool syncedData(true);
+        reduce(syncedData, orOp<bool>());
+        // Info << "cP8" << endl;        // Pout << " -- contactList.size() : " << contactList.size() << endl;
+        // Info << "CPoint #6" << endl;
         if(contactList.size() > 0 )
         {
             label contactPerProc(ceil(double(contactList.size())/Pstream::nProcs()));
@@ -844,7 +960,11 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
             for(int assignProc = Pstream::myProcNo()*contactPerProc; assignProc < min((Pstream::myProcNo()+1)*contactPerProc,contactList.size()); assignProc++)
             {
                 prtSubContactInfo* sCI = contactList[assignProc];
+
                 const Tuple2<label, label>& cPair = sCI->getCPair();
+
+                contactResolvedcKey[assignProc] = cPair.first();
+                contactResolvedtKey[assignProc] = cPair.second();
 
                 ibContactClass& cClass(immersedBodies_[cPair.first()].getibContactClass());
                 ibContactClass& tClass(immersedBodies_[cPair.second()].getibContactClass());
@@ -853,23 +973,106 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                 {
                     resolvedPrtContacts++;
                     prtContactInfo& prtcInfo(getPrtcInfo(cPair));
-                    sCI->setResolvedContact(solvePrtContact(mesh_, prtcInfo, *sCI, deltaTime*step));
+                    
+                    bool resolved(solvePrtContact(mesh_, prtcInfo, *sCI, deltaTime*step));
+                    sCI->setResolvedContact(resolved);
+                    contactResolved[assignProc] += resolved;
                 }
             }
         }
+        clockTime syncSortTime3_1;
+        // Info << "cP9" << endl;
+        // Pout << contactResolved.size() << " contactResolved.size() " << endl;
+        reduce(contactResolved,sumOp<List<bool>>());
+        // Info << "cP9.01" << endl;
+        reduce(contactResolvedcKey,sumOp<List<label>>());
+        // Info << "cP9.02" << endl;
+        reduce(contactResolvedtKey,sumOp<List<label>>());        
+        // Info << "cP9.03" << endl;
+        // Info << "CPoint #8" << endl;
+        contactResolvedKeyTable.clear();
+        // Info << "cP9.1" << endl;
+        forAll(contactResolvedcKey,cKey)
+        {   
+            contactResolvedKeyTable.insert(Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey]),cKey);
+        }
+        // Info << "cP9.2" << endl;
+        syncResultTime_syncDataCost_ += syncSortTime3_1.timeIncrement();
 //OS Time effitiency Testing
+
         prtContactParallelTime_ += particleContactParallelRun.timeIncrement();
         prtContactTime_ += particleContactStopWatch.timeIncrement();
-        clockTime DEMIntergrationRun;
+        clockTime syncResultsRun;
 //OS Time effitiency Testing
+        // Info << "cP9.3" << endl;
+        List<vector> cBodyOutForceList(vListSize,vector::zero);
+        List<vector> cBodyOutTorqueList(vListSize,vector::zero);
+        List<vector> tBodyOutForceList(vListSize,vector::zero);
+        List<vector> tBodyOutTorqueList(vListSize,vector::zero);
+        // Info << "cP9.4" << endl;
+       syncOutForceKeyTable.clear();
+        // Info << "CPoint #10" << endl;
+       label nIter(0);
         for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
         {
+            clockTime syncSortTime;
+            // List<vector> outForce(4,vector::zero);
+            // Info << "CheckPoint #9.1" << endl;
+            const Tuple2<label, label> cPair = Tuple2<label, label>(it->first, it->second);
+            // Info << "CheckPoint #9.2" << endl;
+            // label nIters(0);
+            prtContactInfo& prtcInfo(getPrtcInfo(cPair));
+            
+            syncResultTime_sortContactList_ += syncSortTime.timeIncrement();
+
+            if(contactResolvedKeyTable.found(cPair))
+            {
+                label nSubContact(0);
+                std::vector<std::shared_ptr<prtSubContactInfo>>& subCList
+                    = prtcInfo.getPrtSCList();
+                // Info << "cP9.5" << endl;
+                for(auto sC : subCList)
+                {
+                    nSubContact++;
+                    cBodyOutForceList[nIter] += sC->getOutForce().first().F;
+                    cBodyOutTorqueList[nIter] += sC->getOutForce().first().T;
+                    tBodyOutForceList[nIter] += sC->getOutForce().second().F;
+                    tBodyOutTorqueList[nIter] += sC->getOutForce().second().T;
+                }
+                // Info << "cP9.6" << endl;
+                
+            }
+            // bodiesOutForceList[Pstream::myProcNo()][nIter] = outForce;
+
+            // outForce.clear();
+
+            syncOutForceKeyTable.insert(cPair,nIter);
+            nIter++;
+        }
+        clockTime syncSortTime3_8;
+        // Info << "cP10" << endl;
+
+        // Pstream::gatherList(bodiesOutForceList,0);
+        // Pstream::scatterList(bodiesOutForceList,0);
+        reduce(cBodyOutForceList,sumOp<List<vector>>());
+        reduce(cBodyOutTorqueList,sumOp<List<vector>>());
+        reduce(tBodyOutForceList,sumOp<List<vector>>());
+        reduce(tBodyOutTorqueList,sumOp<List<vector>>());
+        // Info << "CheckPoint #1" << endl;
+        syncResultTime_syncDataCost_ += syncSortTime3_8.timeIncrement();
+        label nvListIter(0);
+        // Info << "CheckPoint #2" << endl;
+        for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
+        {
+            clockTime syncSortTime;
+
             const Tuple2<label, label> cPair = Tuple2<label, label>(it->first, it->second);
             label cInd(cPair.first());
             label tInd(cPair.second());
 
-            prtContactInfo& prtcInfo(getPrtcInfo(cPair));
-            if(!prtcInfo.contactResolved())
+            syncResultTime_sortContactList_ += syncSortTime.timeIncrement();
+
+            if(!contactResolvedKeyTable.found(cPair))
             {
                 if(prtcInfoTable_.found(cPair))
                 {
@@ -877,51 +1080,104 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                     continue;
                 }
             }
-
-            std::vector<std::shared_ptr<prtSubContactInfo>>& subCList
-                = prtcInfo.getPrtSCList();
-
-            for(auto sC : subCList)
+            else if(contactResolved[contactResolvedKeyTable[cPair]])
             {
-                sC->syncData();
+                if(!syncOutForceKeyTable.found(cPair))
+                {
+                    Pout <<" -- cPair  "<<cInd << " - "<<tInd << " not found in syncOutForceKeyTable" << endl;
+                    continue;
+                }
 
-                immersedBodies_[cInd].updateContactForces
-                (
-                    sC->getOutForce().first()
-                );
+                nvListIter = syncOutForceKeyTable[cPair];
+                if(nvListIter > cBodyOutForceList.size())
+                {
+                    Pout <<" -- cPair  "<<cInd << " - "<<tInd << " nvListIter > bodiesOutForceList[Pstream::myProcNo()].size()" << endl;
+                    continue;
+                }
+                                
+                clockTime syncSortTime3;
+                
+                vector F1 = vector::zero;
+                vector T1 = vector::zero;
+                vector F2 = vector::zero;
+                vector T2 = vector::zero;
 
-                immersedBodies_[tInd].updateContactForces
-                (
-                    sC->getOutForce().second()
-                );
+                F1 += cBodyOutForceList[nvListIter];                    
+                T1 += cBodyOutTorqueList[nvListIter];
+                F2 += tBodyOutForceList[nvListIter];
+                T2 += tBodyOutTorqueList[nvListIter];
+
+                forces cF;
+                cF.F = F1;
+                cF.T = T1;
+                forces tF;
+                tF.F = F2;
+                tF.T = T2;
+
+                immersedBodies_[cInd].updateContactForces(cF);
+                immersedBodies_[tInd].updateContactForces(tF);
+
+                syncResultTime_syncDataCost_ +=syncSortTime3.timeIncrement();
             }
+            else
+            {
+                if(prtcInfoTable_.found(cPair))
+                {
+                    prtcInfoTable_.erase(cPair);
+                    continue;
+                }
+            }
+            // Info << "cP11" << endl;
+
+        
         }
+
+        // Info << "CheckPoint #10" << endl;
+        syncResultsTime_ += syncResultsRun.timeIncrement();
+        clockTime reduceStatisticalDataPrt;
         reduce(resolvedPrtContacts,sumOp<label>());
+        reduceStatisticalDataPrtTime_ += reduceStatisticalDataPrt.timeIncrement();
+        
+        clockTime DEMIntergrationRun;
         InfoH << basic_Info << " -- Possible Particle Contacts: " << possiblePrtContacts
             << " Resolved Particle Contacts: " << resolvedPrtContacts 
-            << " contactPerProc : " << ceil(possiblePrtContacts/Pstream::nProcs()) << endl;
+            << " contactPerProc : " << ceil(float(possiblePrtContacts)/Pstream::nProcs()) << endl;
         scalar maxCoNum = 0;
         label  bodyId = 0;
+        // Info << "cP12" << endl;
         forAll (immersedBodies_,ib)
         {
+            clockTime updateMovement;
             immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
+            updateMovementTime_ += updateMovement.timeIncrement();
             immersedBodies_[ib].printBodyInfo();
-            immersedBodies_[ib].computeBodyCoNumber();
-            if (maxCoNum < immersedBodies_[ib].getCoNum())
+            clockTime computeCONum;
+            if(!solverInfo::getOnlyDEM())
             {
-                maxCoNum = immersedBodies_[ib].getCoNum();
-                bodyId = ib;
+                immersedBodies_[ib].computeBodyCoNumber();
+                if (maxCoNum < immersedBodies_[ib].getCoNum())
+                {
+                    maxCoNum = immersedBodies_[ib].getCoNum();
+                    bodyId = ib;
+                }
             }
+            computeCONumTime_ += computeCONum.timeIncrement();
         }
-        InfoH << basic_Info << "Max CoNum = " << maxCoNum << " at body " << bodyId << endl;
+        // Info << "cP13" << endl;
+        if(!solverInfo::getOnlyDEM())
+        {
+            InfoH << basic_Info << "Max CoNum = " << maxCoNum << " at body " << bodyId << endl;
+        }
+
+        //OS Time effitiency Testing            
+        demItegrationTime_ += DEMIntergrationRun.timeIncrement(); 
+        //OS Time effitiency Testing
 
         pos += step;
         
         if (pos + step + SMALL >= 1)
             step = 1 - pos;
-//OS Time effitiency Testing            
-        demItegrationTime_ = DEMIntergrationRun.timeIncrement(); 
-//OS Time effitiency Testing                   
+
     }
 }
 //---------------------------------------------------------------------------//
@@ -1153,6 +1409,7 @@ void openHFDIBDEM::writeFirtsTimeBodiesInfo()
 {
     word curOutDir(recordOutDir_ + "/" + mesh_.time().timeName());
     bool checkExistance(false);
+    reduce(checkExistance,orOp<bool>());
     if(!recordSimulation_ || isDir(curOutDir))
         return;
 
@@ -1178,12 +1435,12 @@ void openHFDIBDEM::writeFirtsTimeBodiesInfo()
     label bodiesPerProc = ceil(listZize/Pstream::nProcs());
     InfoH << basic_Info << "Active IB listZize      : " << listZize<< endl;
     InfoH << basic_Info << "bodiesPerProc : " << bodiesPerProc<< endl;
-    Pout << "Processor "<< Pstream::myProcNo() << endl;
+    // Pout << "Processor "<< Pstream::myProcNo() << endl;
 
     for(int assignProc = Pstream::myProcNo()*bodiesPerProc; assignProc < min((Pstream::myProcNo()+1)*bodiesPerProc,activeIB.size()); assignProc++)
     {
         const label bodyId(activeIB[assignProc]);
-        Pout <<"Processor "<< Pstream::myProcNo() << " writes Body " << bodyId << endl;
+        // Pout <<"Processor "<< Pstream::myProcNo() << " writes Body " << bodyId << endl;
         word path(curOutDir + "/body" + std::to_string(immersedBodies_[bodyId].getBodyId()) +".info");
         OFstream ofStream(path);
         IOobject outClass

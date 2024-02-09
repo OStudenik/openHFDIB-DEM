@@ -213,7 +213,7 @@ vector wallSubContactInfo::getFt(wallContactVars& wallCntvar, scalar deltaT)
         - (wallCntvar.FtPrev_ & wallCntvar.contactNormal_)
         *wallCntvar.contactNormal_);
     // scale projected Ft to have same magnitude as FtLast
-    // vector FtLastS(mag(wallCntvar.FtPrev_) * (FtLastP/(mag(FtLastP)+SMALL)));
+    vector FtLastS(mag(wallCntvar.FtPrev_) * (FtLastP/(mag(FtLastP)+SMALL)));
     // compute relative tangential velocity
     vector cVeliNorm = wallCntvar.Veli_
         - ((wallCntvar.Veli_ & wallCntvar.contactNormal_)
@@ -222,8 +222,8 @@ vector wallSubContactInfo::getFt(wallContactVars& wallCntvar, scalar deltaT)
     vector Vt(cVeliNorm - vector::zero);
     // compute tangential force
     vector Ftdi(- meanCntPar.aGammat_*sqrt(meanCntPar.aG_*reduceM_*wallCntvar.Lc_)*Vt);
-    // wallCntvar.FtPrev_ = FtLastS - meanCntPar.aG_*wallCntvar.Lc_*Vt*deltaT + Ftdi;
-    wallCntvar.FtPrev_ =  - meanCntPar.aG_*wallCntvar.Lc_*Vt*deltaT + Ftdi;
+    wallCntvar.FtPrev_ = FtLastS - meanCntPar.aG_*wallCntvar.Lc_*Vt*deltaT + Ftdi;
+    // wallCntvar.FtPrev_ =  - meanCntPar.aG_*wallCntvar.Lc_*Vt*deltaT + Ftdi;
     return wallCntvar.FtPrev_;
 }
 //---------------------------------------------------------------------------//

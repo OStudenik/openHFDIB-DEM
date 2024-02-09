@@ -101,6 +101,8 @@ namespace Foam
         DynamicLabelList ibPartialVolume_;
         label owner_;
 
+        // label shiftOwner_;
+
         label cellToStartInCreateIB_;
         scalar  thrSurf_;
 
@@ -434,6 +436,34 @@ namespace Foam
             pointField nonPointField;
             return nonPointField;
         }
+
+        virtual  void setBodyPosition(vector pos)
+        {
+            InfoH << iB_Info << "21-- geomModelMessage-- "
+                << "notIplemented"<<endl;
+        }
+
+        virtual  void setBodyPosition(pointField pos)
+        {
+            InfoH << iB_Info << "22-- geomModelMessage-- "
+                << "notIplemented"<<endl;
+        }
+
+        virtual vector getBodyPosition()
+        {
+            InfoH << iB_Info << "22-- geomModelMessage-- "
+                << "notIplemented"<<endl;
+            return vector::zero;
+        }
+        
+        // virtual pointField getBodyPosition()
+        // {
+        //     InfoH << iB_Info << "22-- geomModelMessage-- "
+        //         << "notIplemented"<<endl;
+        //     pointField emptyField;
+        //     return emptyField;
+        // }
+        
     };
 }
 #endif

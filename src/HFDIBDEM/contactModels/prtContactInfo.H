@@ -160,6 +160,11 @@ class prtContactInfo
     void clearData();
 
     void syncData();
+
+    label getContactListSize()
+    {
+        return contactList_.size();
+    }
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
