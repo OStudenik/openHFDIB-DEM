@@ -63,7 +63,7 @@ bool addModel::isBodyInContact(PtrList<immersedBody>& immersedBodies)
             cIbClass,
             cIbVars
     );
-
+    // Info << "Checking for wall contact -- CP1" << endl;
     bool inContact = contactModel::detectWallContact(
         mesh_,
         cIbClass,

@@ -157,7 +157,7 @@ bool wallContactInfo::isInsidePlane(
     const vector& normalVector = wallPatches[wall][0];
     const vector& centerPoint = wallPatches[wall][1];
     vector testVector = checkedPoint - centerPoint;
-    if((testVector & normalVector) < 0)
+    if((testVector & normalVector) <  0)
     {
         return true;
     }
