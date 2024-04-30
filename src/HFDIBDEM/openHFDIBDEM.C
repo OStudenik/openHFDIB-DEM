@@ -190,6 +190,15 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
     
     Info <<" -- Coefficient for characteristic Lenght Lc is set to : "<< contactModelInfo::getLcCoeff() << endl;
 
+        if(demDic.found("useBoundBoxWallContact"))
+    {
+        wallPlaneInfo::setUseWallBoundBox(readBool(demDic.lookup("useBoundBoxWallContact")));
+    }
+    else
+    {
+         wallPlaneInfo::setUseWallBoundBox(false);
+    }
+    
     dictionary patchDic = demDic.subDict("collisionPatches");
     List<word> patchNames = patchDic.toc();
     forAll(patchNames, patchI)
@@ -198,6 +207,14 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
         vector patchNVec = patchDic.subDict(patchNames[patchI]).lookup("nVec");
         vector planePoint = patchDic.subDict(patchNames[patchI]).lookup("planePoint");
 
+        if(wallPlaneInfo::getUseWallBoundBox())
+        {
+            vector patchMin = patchDic.subDict(patchNames[patchI]).lookup("minBound");
+            vector patchMax = patchDic.subDict(patchNames[patchI]).lookup("maxBound");
+            boundBox wallBoundBox(patchMin,patchMax);
+            wallPlaneInfo::wallPlaneBoundBox_insert(patchNames[patchI],wallBoundBox);
+        }
+        
         wallPlaneInfo::wallPlaneInfo_insert(
             patchNames[patchI],
             patchNVec,

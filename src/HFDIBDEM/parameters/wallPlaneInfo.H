@@ -55,6 +55,11 @@ class wallPlaneInfo
         return wallPlaneInfo_;
     }
 
+    static const HashTable<boundBox,string,Hash<string>>& getWallPlaneBoundBox()
+    {
+        return wallPlaneBoundBox_;
+    }
+
     static void wallPlaneInfo_insert
     (
         const string& wallPatch,
@@ -66,9 +71,29 @@ class wallPlaneInfo
         wallPlaneInfo_.insert(wallPatch,planeInfo);
     };
 
+    static void setUseWallBoundBox(const bool useWallBoundBox)
+    {
+        useWallBoundBox_ = useWallBoundBox;
+    }
+
+    static bool getUseWallBoundBox()
+    {
+        return useWallBoundBox_;
+    }
+
+    static void wallPlaneBoundBox_insert
+    (
+        const string& wallPatch,
+        const boundBox& boundBox
+    )
+    {
+        wallPlaneBoundBox_.insert(wallPatch,boundBox);
+    }
+    
     //- Hash table for storing wall material information
     static HashTable<List<vector>,string,Hash<string>> wallPlaneInfo_;
-
+    static bool useWallBoundBox_;
+    static HashTable<boundBox,string,Hash<string>> wallPlaneBoundBox_;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

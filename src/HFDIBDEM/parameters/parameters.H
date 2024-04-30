@@ -66,9 +66,12 @@ HashTable<materialInfo,string,Hash<string>> wallMatInfo::wallMatInfo_ =
 HashTable<List<vector>,string,Hash<string>> wallPlaneInfo::wallPlaneInfo_ =
     HashTable<List<vector>,string,Hash<string>>();
 
-HashTable<List<vector>,string,Hash<string>> cyclicPlaneInfo::cyclicPlaneInfo_ =
-    HashTable<List<vector>,string,Hash<string>>();
+HashTable<boundBox,string,Hash<string>> wallPlaneInfo::wallPlaneBoundBox_ =
+    HashTable<boundBox,string,Hash<string>>();
 
+HashTable<List<vector>,string,Hash<string>> cyclicPlaneInfo ::cyclicPlaneInfo_ =
+    HashTable<List<vector>,string,Hash<string>>();	
+    
 std::map<string, string> cyclicPlaneInfo::cyclicPatchPairs_ =
     std::map<string, string>();
 
@@ -81,7 +84,7 @@ bool solverInfo::onlyDEM_ = false;
 bool contactModelInfo::useChenRotationalModel_ = false;
 bool contactModelInfo::useMindlinRotationalModel_ = false;
 bool contactModelInfo::increasedDamping_ = false;
-
+bool wallPlaneInfo::useWallBoundBox_ = false;
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam

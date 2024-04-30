@@ -121,6 +121,11 @@ bool detectWallContact_Sphere(
             {
                 continue;
             }
+            if(wallPlaneInfo::getUseWallBoundBox() && !wallPlaneInfo::getWallPlaneBoundBox()[contactPatches[patchI]].contains(cCenter))
+            {
+                continue;
+            }
+
             contactPatchesTmp.append(contactPatches[patchI]);
         }
         contactPatches = contactPatchesTmp;
@@ -129,6 +134,7 @@ bool detectWallContact_Sphere(
         {
             return false;
         }
+        
         wallCntInfo.getWallSCList().emplace_back(
             std::make_shared<wallSubContactInfo>(
                 List<Tuple2<point,boundBox>>(),
