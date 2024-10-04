@@ -87,7 +87,7 @@ namespace Foam
     typedef DynamicList<scalar> DynamicScalarList;
     typedef DynamicList<vector> DynamicVectorList;
     typedef DynamicList<point>  DynamicPointList;
-
+    typedef HashSet<Tuple2<label,label>,Hash<Tuple2<label,label>>> Tuple2HashSet;
     //Basic members
     const  fvMesh&          mesh_;
     IOdictionary            HFDIBDEMDict_;
@@ -127,7 +127,11 @@ namespace Foam
     bool recordSimulation_;
     bool recordFirstTimeStep_ = false;
     word recordOutDir_;
-
+    Tuple2HashSet addedContactPairs_;
+    label resolvedContacts_ = 0;
+    labelHashSet activeWallContacts_;
+    label resolvedWallContacts_ = 0;
+    
     public:
 
     // Constructors ----------------------------------------------------

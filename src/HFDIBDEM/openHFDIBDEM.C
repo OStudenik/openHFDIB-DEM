@@ -789,6 +789,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
 
         DynamicLabelList wallContactIB;
         wallContactIBTable.clear();
+        labelHashSet addedWallContacts;
         forAll (immersedBodies_,bodyId)
         {
             immersedBody& cIb(immersedBodies_[bodyId]);
@@ -811,9 +812,20 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                         cIb.getibContactClass().inContactWithStatic(true);
                         wallContactIB.append(bodyId);
                         wallContactIBTable.insert(bodyId,wallContactIB.size()-1);
+                        
+                        if(!activeWallContacts_.found(bodyId))
+                        {
+                            activeWallContacts_.insert(bodyId);                            
+                        }
+                        addedWallContacts.insert(bodyId);
                         // cIb.getWallCntInfo().registerSubContactList(wallContactList);
                     }
                 }
+            }
+            if(!addedWallContacts.found(bodyId) && activeWallContacts_.found(bodyId))
+            {
+                activeWallContacts_.erase(bodyId);
+                resolvedWallContacts_++;   
             }
         }
         // possibleWallContacts = wallContactIB.size();
@@ -898,6 +910,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         DynamicList<prtSubContactInfo*> contactList;
         // check only pairs whose bounding boxes are intersected for the contact
         label vListSize(0);
+        addedContactPairs_.clear(); //clearing last iteration of added contact pairs
         for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
         {
             const Tuple2<label, label> cPair = Tuple2<label, label>(it->first, it->second);
@@ -1019,7 +1032,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         reduce(tBodyOutTorqueList,sumOp<List<vector>>());
 
         label nvListIter(0);
-
+        // InfoH << DEM_Info << " --Info#1 prtCInfoTable_size() : " << prtcInfoTable_.size() << endl;
         for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
         {
             const Tuple2<label, label> cPair = Tuple2<label, label>(it->first, it->second);
@@ -1031,21 +1044,26 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                 if(prtcInfoTable_.found(cPair))
                 {
                     prtcInfoTable_.erase(cPair);
+                    if(!addedContactPairs_.found(cPair))
+                    {
+                        resolvedContacts_++;
+                    }
                     continue;
                 }
+                
             }
             else if(contactResolved[contactResolvedKeyTable[cPair]])
             {
                 if(!syncOutForceKeyTable.found(cPair))
                 {
-                    Pout <<" -- cPair  "<<cInd << " - "<<tInd << " not found in syncOutForceKeyTable" << endl;
+                    // Pout <<" -- cPair  "<<cInd << " - "<<tInd << " not found in syncOutForceKeyTable" << endl;
                     continue;
                 }
 
                 nvListIter = syncOutForceKeyTable[cPair];
                 if(nvListIter > cBodyOutForceList.size())
                 {
-                    Pout <<" -- cPair  "<<cInd << " - "<<tInd << " nvListIter > bodiesOutForceList[Pstream::myProcNo()].size()" << endl;
+                    // Pout <<" -- cPair  "<<cInd << " - "<<tInd << " nvListIter > bodiesOutForceList[Pstream::myProcNo()].size()" << endl;
                     continue;
                 }
 
@@ -1074,11 +1092,16 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                 if(prtcInfoTable_.found(cPair))
                 {
                     prtcInfoTable_.erase(cPair);
+                    if(!addedContactPairs_.found(cPair))
+                    {
+                        resolvedContacts_++;
+                    }
                     continue;
                 }
+                
             }
         }
-
+        // InfoH << DEM_Info << " --Info#2 prtCInfoTable_size() : " << prtcInfoTable_.size() << endl;
         forAll (immersedBodies_,ib)
         {
             immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
@@ -1096,10 +1119,11 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
 
         if (pos + step + SMALL >= 1)
             step = 1 - pos;
-//OS Time effitiency Testing
-        // demItegrationTime_ = DEMIntergrationRun.timeIncrement();
-//OS Time effitiency Testing
     }
+    InfoH << basic_Info << "-- currently active prt-prt collisions " << prtcInfoTable_.size() << endl;
+    InfoH << basic_Info << "-- number of prt-prt contacts resolved " << resolvedContacts_ << endl;
+    InfoH << basic_Info << "-- currently active prt-wall collisions " << activeWallContacts_.size() << endl;
+    InfoH << basic_Info << "-- number of prt-wall contacts resolved " << resolvedWallContacts_ << endl;
 }
 //---------------------------------------------------------------------------//
 prtContactInfo& openHFDIBDEM::getPrtcInfo(Tuple2<label,label> cPair)
@@ -1112,6 +1136,7 @@ prtContactInfo& openHFDIBDEM::getPrtcInfo(Tuple2<label,label> cPair)
             immersedBodies_[cPair.second()].getibContactClass(),
             immersedBodies_[cPair.second()].getContactVars()
         )));
+        addedContactPairs_.insert(cPair);
     }
 
     return prtcInfoTable_[cPair]();
