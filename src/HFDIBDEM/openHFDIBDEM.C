@@ -1032,7 +1032,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         reduce(tBodyOutTorqueList,sumOp<List<vector>>());
 
         label nvListIter(0);
-        // InfoH << DEM_Info << " --Info#1 prtCInfoTable_size() : " << prtcInfoTable_.size() << endl;
+        // InfoH << basic_Info << " --Info#1 prtCInfoTable_size() : " << prtcInfoTable_.size() << endl;
         for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
         {
             const Tuple2<label, label> cPair = Tuple2<label, label>(it->first, it->second);
@@ -1056,17 +1056,14 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
             {
                 if(!syncOutForceKeyTable.found(cPair))
                 {
-                    // Pout <<" -- cPair  "<<cInd << " - "<<tInd << " not found in syncOutForceKeyTable" << endl;
                     continue;
                 }
 
                 nvListIter = syncOutForceKeyTable[cPair];
                 if(nvListIter > cBodyOutForceList.size())
                 {
-                    // Pout <<" -- cPair  "<<cInd << " - "<<tInd << " nvListIter > bodiesOutForceList[Pstream::myProcNo()].size()" << endl;
                     continue;
                 }
-
                 vector F1 = vector::zero;
                 vector T1 = vector::zero;
                 vector F2 = vector::zero;
@@ -1101,7 +1098,23 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                 
             }
         }
-        // InfoH << DEM_Info << " --Info#2 prtCInfoTable_size() : " << prtcInfoTable_.size() << endl;
+        if (prtcInfoTable_.size() > vListSize)
+        {
+            Tuple2HashSet verletListsKeys;
+            for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
+            {
+                verletListsKeys.insert(Tuple2<label, label>(it->first, it->second));
+                
+            }
+            for(auto cPair : prtcInfoTable_.toc())
+            {
+                if(!verletListsKeys.found(cPair))
+                {
+                    prtcInfoTable_.erase(cPair);
+                    resolvedContacts_++;
+                }
+            }
+        }
         forAll (immersedBodies_,ib)
         {
             immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
