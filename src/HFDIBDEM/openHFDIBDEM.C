@@ -295,12 +295,19 @@ void openHFDIBDEM::initialize
         bool DEMoutput = readBool(outputDic.lookup("DEM"));
         bool addModelOutput = readBool(outputDic.lookup("addModel"));
         bool parallelDEMOutput = readBool(outputDic.lookup("parallelDEM"));
+        bool statisticsOutput = false;
+        if(outputDic.found("statistics"))
+        {
+            statisticsOutput = readBool(outputDic.lookup("statistics"));
+        }
+
         InfoH.setOutput(
             basicOutput,
             iBoutput,
             DEMoutput,
             addModelOutput,
-            parallelDEMOutput
+            parallelDEMOutput,
+            statisticsOutput
         );
     }
 
@@ -1133,10 +1140,10 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         if (pos + step + SMALL >= 1)
             step = 1 - pos;
     }
-    InfoH << basic_Info << "-- currently active prt-prt collisions " << prtcInfoTable_.size() << endl;
-    InfoH << basic_Info << "-- number of prt-prt contacts resolved " << resolvedContacts_ << endl;
-    InfoH << basic_Info << "-- currently active prt-wall collisions " << activeWallContacts_.size() << endl;
-    InfoH << basic_Info << "-- number of prt-wall contacts resolved " << resolvedWallContacts_ << endl;
+    InfoH << statistics_Info << "-- currently active prt-prt collisions " << prtcInfoTable_.size() << endl;
+    InfoH << statistics_Info << "-- number of prt-prt contacts resolved " << resolvedContacts_ << endl;
+    InfoH << statistics_Info << "-- currently active prt-wall collisions " << activeWallContacts_.size() << endl;
+    InfoH << statistics_Info << "-- number of prt-wall contacts resolved " << resolvedWallContacts_ << endl;
 }
 //---------------------------------------------------------------------------//
 prtContactInfo& openHFDIBDEM::getPrtcInfo(Tuple2<label,label> cPair)
