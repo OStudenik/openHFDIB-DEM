@@ -131,6 +131,9 @@ namespace Foam
     label resolvedContacts_ = 0;
     labelHashSet activeWallContacts_;
     label resolvedWallContacts_ = 0;
+    HashTable<Tuple2<label,label>,string,Hash<string>> zoneContactCounter_;
+    HashTable <vector,Tuple2<label, label>,Hash<Tuple2<label, label>>> oldContactCentersTable_;
+    HashTable<vector,label,Hash<label>> oldWallContactCentersTable_;    
     
     public:
 

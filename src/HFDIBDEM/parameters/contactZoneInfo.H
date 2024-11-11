@@ -23,68 +23,51 @@ License
     along with openHFDIB. If not, see <http://www.gnu.org/licenses/lgpl.html>.
 
 InNamspace
-    contactModel
+    
 
 Description
-    DEM parameters
+    Static class for storing contact zones for contact counterss
 
 Contributors
     Martin Isoz (2019-*), Martin Kotouč Šourek (2019-*),
     Ondřej Studeník (2020-*)
 \*---------------------------------------------------------------------------*/
 
-#ifndef parameters_H
-#define parameters_H
+#ifndef contactZoneInfo_H
+#define contactZoneInfo_H
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-#include "materialProperties.H"
-#include "interAdhesion.H"
-#include "wallMatInfo.H"
-#include "wallPlaneInfo.H"
-#include "virtualMeshLevel.H"
-#include "cyclicPlaneInfo.H"
-#include "contactModelInfo.H"
-#include "contactZoneInfo.H"
-#include "solverInfo.H"
 
 namespace Foam
 {
 
 /*---------------------------------------------------------------------------*\
-                            Parameters Definition
+                      Class contactZoneInfo Declaration
 \*---------------------------------------------------------------------------*/
 
-HashTable<materialInfo,string,Hash<string>> materialProperties::materialProps_ =
-    HashTable<materialInfo,string,Hash<string>>();
 
-HashTable<scalar,string,Hash<string>> interAdhesion::matInterAdh_ =
-    HashTable<scalar,string,Hash<string>>();
+class contactZoneInfo
+{
+    public:
 
-HashTable<materialInfo,string,Hash<string>> wallMatInfo::wallMatInfo_ =
-    HashTable<materialInfo,string,Hash<string>>();
+    static const HashTable<boundBox,string,Hash<string>>& getZoneInfo()
+    {
+        return contactZoneInfo_;
+    }
 
-HashTable<List<vector>,string,Hash<string>> wallPlaneInfo::wallPlaneInfo_ =
-    HashTable<List<vector>,string,Hash<string>>();
+    static void insert(
+        const string& contactZone,
+        const vector& minPoint,
+        const vector& maxPoint
+    )
+    {
+        contactZoneInfo_.insert(contactZone,boundBox(minPoint,maxPoint));
+    };
 
-HashTable<List<vector>,string,Hash<string>> cyclicPlaneInfo::cyclicPlaneInfo_ =
-    HashTable<List<vector>,string,Hash<string>>();
+    //- Hash table for storing zone boundBox 
+    static HashTable<boundBox,string,Hash<string>> contactZoneInfo_;
 
-std::map<string, string> cyclicPlaneInfo::cyclicPatchPairs_ =
-    std::map<string, string>();
-
-HashTable<boundBox,string,Hash<string>> contactZoneInfo::contactZoneInfo_ =
-    HashTable<boundBox,string,Hash<string>>();
-
-scalar virtualMeshLevel::virtualMeshLevel_ = 1;
-scalar virtualMeshLevel::levelOfDivision_ = 1;
-scalar virtualMeshLevel::charCellSize_ = 1;
-scalar contactModelInfo::LcCoeff_ = 4.0;
-label  solverInfo::nSolidsTreshnold_ = 1000;
-bool solverInfo::onlyDEM_ = false;
-bool contactModelInfo::useChenRotationalModel_ = false;
-bool contactModelInfo::useMindlinRotationalModel_ = false;
-bool contactModelInfo::increasedDamping_ = false;
+};
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

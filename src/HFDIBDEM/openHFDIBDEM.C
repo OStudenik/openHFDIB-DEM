@@ -215,6 +215,25 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
         );
     }
 
+    if(demDic.found("contactCounterZones"))
+    {
+        dictionary counterZones = demDic.subDict("contactCounterZones");
+        List<word> zoneNames = counterZones.toc();
+        
+        forAll(zoneNames, zone)
+        {
+            vector minPoint = counterZones.subDict(zoneNames[zone]).lookup("minPoint");
+            vector maxPoint = counterZones.subDict(zoneNames[zone]).lookup("maxPoint");
+
+            contactZoneInfo::insert(
+                zoneNames[zone],
+                minPoint,
+                maxPoint
+            );
+
+            zoneContactCounter_.insert(zoneNames[zone],Tuple2<label,label>(0,0));
+        }
+    }
     if(demDic.found("cyclicPatches"))
     {
         Info << "CyclicPatches Found " << endl;
@@ -797,6 +816,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         DynamicLabelList wallContactIB;
         wallContactIBTable.clear();
         labelHashSet addedWallContacts;
+
         forAll (immersedBodies_,bodyId)
         {
             immersedBody& cIb(immersedBodies_[bodyId]);
@@ -829,15 +849,33 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                     }
                 }
             }
+
             if(!addedWallContacts.found(bodyId) && activeWallContacts_.found(bodyId))
             {
+                if(oldWallContactCentersTable_.found(bodyId))
+                {   
+                    if(contactZoneInfo::getZoneInfo().size() > 0)
+                    {
+                        for( auto zone : contactZoneInfo::getZoneInfo().toc())
+                        {
+                            if(oldWallContactCentersTable_.found(bodyId))
+                            {
+                                if(contactZoneInfo::getZoneInfo()[zone].contains(oldWallContactCentersTable_[bodyId]))
+                                {
+                                    zoneContactCounter_[zone].second()++;
+                                    // oldWallContactCentersTable_.erase(bodyId);
+                                }
+                            }
+                        }
+                    }
+                }
                 activeWallContacts_.erase(bodyId);
-                resolvedWallContacts_++;   
+                resolvedWallContacts_++;
             }
         }
         // possibleWallContacts = wallContactIB.size();
         List<bool> wallContactResolvedList(wallContactIB.size(),false);
-
+        List<vector> wallContactCenterList(wallContactIB.size(),vector::zero);
         if(wallContactIB.size() > 0)
         {
             label wallContactPerProc(ceil(double(wallContactIB.size())/Pstream::nProcs()));
@@ -870,16 +908,27 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                     sCW->setResolvedContact(resolved);
                     wallContactResolvedList[assignProc] += resolved;
                     wallcRList[sC] = resolved;
+                    wallContactCenterList[assignProc] += sCW->getWallCntVars().contactCenter_;
                 }
             }
 
             reduce(wallContactResolvedList,sumOp<List<bool>>());
+            reduce(wallContactCenterList,sumOp<List<vector>>());
 
             List<vector> iBodyOutForceList(wallContactIB.size(),vector::zero);
             List<vector> iBodyOutTorqueList(wallContactIB.size(),vector::zero);
 
             forAll (wallContactIB,iB)
-            {
+            {   
+                if(oldWallContactCentersTable_.found(wallContactIB[iB]))
+                {
+                    oldWallContactCentersTable_[wallContactIB[iB]] = wallContactCenterList[iB];
+                }
+                else
+                {
+                    oldWallContactCentersTable_.insert(wallContactIB[iB],wallContactCenterList[iB]);                    
+                }
+                
                 immersedBody& cIb(immersedBodies_[wallContactIB[iB]]);
                 if(wallContactIBTable.found(cIb.getBodyId()))
                 {
@@ -899,7 +948,6 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
             }
             reduce(iBodyOutForceList,sumOp<List<vector>>());
             reduce(iBodyOutTorqueList,sumOp<List<vector>>());
-
             forAll (wallContactIB,iB)
             {
                 immersedBody& cIb(immersedBodies_[wallContactIB[iB]]);
@@ -959,6 +1007,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         List<bool> contactResolved(contactList.size(),false);
         List<label> contactResolvedcKey(contactList.size(),0);
         List<label> contactResolvedtKey(contactList.size(),0);
+        List<vector> contactCenterList(contactList.size(),vector::zero);
         bool syncedData(true);
         reduce(syncedData, orOp<bool>());
 
@@ -990,6 +1039,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                     sCI->setResolvedContact(resolved);
 
                     contactResolved[assignProc] += resolved;
+                    contactCenterList[assignProc] += sCI->getprtCntVars().contactCenter_;
                 }
             }
         }
@@ -997,9 +1047,19 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         reduce(contactResolved,sumOp<List<bool>>());
         reduce(contactResolvedcKey,sumOp<List<label>>());
         reduce(contactResolvedtKey,sumOp<List<label>>());
+        reduce(contactCenterList,sumOp<List<vector>>());
         contactResolvedKeyTable.clear();
         forAll(contactResolvedcKey,cKey)
         {
+            if(oldContactCentersTable_.found(Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey])))
+            {
+                oldContactCentersTable_[Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey])] = contactCenterList[cKey];
+            }
+            else
+            {
+                oldContactCentersTable_.insert(Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey]),contactCenterList[cKey]);
+            }
+
             contactResolvedKeyTable.insert(Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey]),cKey);
         }
         List<vector> cBodyOutForceList(vListSize,vector::zero);
@@ -1037,115 +1097,195 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         reduce(cBodyOutTorqueList,sumOp<List<vector>>());
         reduce(tBodyOutForceList,sumOp<List<vector>>());
         reduce(tBodyOutTorqueList,sumOp<List<vector>>());
-
+        
         label nvListIter(0);
         // InfoH << basic_Info << " --Info#1 prtCInfoTable_size() : " << prtcInfoTable_.size() << endl;
-        for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
-        {
-            const Tuple2<label, label> cPair = Tuple2<label, label>(it->first, it->second);
-            label cInd(cPair.first());
-            label tInd(cPair.second());
-
-            if(!contactResolvedKeyTable.found(cPair))
-            {
-                if(prtcInfoTable_.found(cPair))
-                {
-                    prtcInfoTable_.erase(cPair);
-                    if(!addedContactPairs_.found(cPair))
-                    {
-                        resolvedContacts_++;
-                    }
-                    continue;
-                }
-                
-            }
-            else if(contactResolved[contactResolvedKeyTable[cPair]])
-            {
-                if(!syncOutForceKeyTable.found(cPair))
-                {
-                    continue;
-                }
-
-                nvListIter = syncOutForceKeyTable[cPair];
-                if(nvListIter > cBodyOutForceList.size())
-                {
-                    continue;
-                }
-                vector F1 = vector::zero;
-                vector T1 = vector::zero;
-                vector F2 = vector::zero;
-                vector T2 = vector::zero;
-
-                F1 += cBodyOutForceList[nvListIter];
-                T1 += cBodyOutTorqueList[nvListIter];
-                F2 += tBodyOutForceList[nvListIter];
-                T2 += tBodyOutTorqueList[nvListIter];
-
-                forces cF;
-                cF.F = F1;
-                cF.T = T1;
-                forces tF;
-                tF.F = F2;
-                tF.T = T2;
-
-                immersedBodies_[cInd].updateContactForces(cF);
-                immersedBodies_[tInd].updateContactForces(tF);
-            }
-            else
-            {
-                if(prtcInfoTable_.found(cPair))
-                {
-                    prtcInfoTable_.erase(cPair);
-                    if(!addedContactPairs_.found(cPair))
-                    {
-                        resolvedContacts_++;
-                    }
-                    continue;
-                }
-                
-            }
-        }
-        if (prtcInfoTable_.size() > vListSize)
-        {
-            Tuple2HashSet verletListsKeys;
             for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
             {
-                verletListsKeys.insert(Tuple2<label, label>(it->first, it->second));
-                
-            }
-            for(auto cPair : prtcInfoTable_.toc())
-            {
-                if(!verletListsKeys.found(cPair))
+                const Tuple2<label, label> cPair = Tuple2<label, label>(it->first, it->second);
+                label cInd(cPair.first());
+                label tInd(cPair.second());
+
+                if(!contactResolvedKeyTable.found(cPair))
                 {
-                    prtcInfoTable_.erase(cPair);
-                    resolvedContacts_++;
+                    if(prtcInfoTable_.found(cPair))
+                    {
+                        prtcInfoTable_.erase(cPair);
+                        if(!addedContactPairs_.found(cPair))
+                        {
+                            if(contactZoneInfo::getZoneInfo().size() > 0)
+                            {
+                                for(auto zone : contactZoneInfo::getZoneInfo().toc())
+                                {
+                                    if(oldContactCentersTable_.found(cPair))
+                                    {
+                                        if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair]))
+                                        {
+                                            zoneContactCounter_[zone].first()++; 
+                                            // oldContactCentersTable_.erase(cPair);
+                                            // break;
+                                        }
+                                    }
+                                }
+                            }
+                            resolvedContacts_++;
+                        }
+                        continue;
+                    }
+                    
+                }
+                else if(contactResolved[contactResolvedKeyTable[cPair]])
+                {
+                    if(!syncOutForceKeyTable.found(cPair))
+                    {
+                        continue;
+                    }
+
+                    nvListIter = syncOutForceKeyTable[cPair];
+                    if(nvListIter > cBodyOutForceList.size())
+                    {
+                        continue;
+                    }
+                    vector F1 = vector::zero;
+                    vector T1 = vector::zero;
+                    vector F2 = vector::zero;
+                    vector T2 = vector::zero;
+
+                    F1 += cBodyOutForceList[nvListIter];
+                    T1 += cBodyOutTorqueList[nvListIter];
+                    F2 += tBodyOutForceList[nvListIter];
+                    T2 += tBodyOutTorqueList[nvListIter];
+
+                    forces cF;
+                    cF.F = F1;
+                    cF.T = T1;
+                    forces tF;
+                    tF.F = F2;
+                    tF.T = T2;
+
+                    immersedBodies_[cInd].updateContactForces(cF);
+                    immersedBodies_[tInd].updateContactForces(tF);
+                }
+                else
+                {
+                    if(prtcInfoTable_.found(cPair))
+                    {
+                        prtcInfoTable_.erase(cPair);
+                        if(!addedContactPairs_.found(cPair))
+                        {
+                            if(contactZoneInfo::getZoneInfo().size() > 0)
+                            {
+                                for(auto zone : contactZoneInfo::getZoneInfo().toc())
+                                {
+                                    if(oldContactCentersTable_.found(cPair))
+                                    {
+                                        if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair]))
+                                        {
+                                            zoneContactCounter_[zone].first()++; 
+                                            // oldContactCentersTable_.erase(cPair);
+                                            // break;
+                                        }
+                                    }
+                                }
+                            }
+                            resolvedContacts_++;
+                        }
+                        continue;
+                    }
+                    
                 }
             }
+            if (prtcInfoTable_.size() > vListSize)
+            {
+                Tuple2HashSet verletListsKeys;
+                for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
+                {
+                    verletListsKeys.insert(Tuple2<label, label>(it->first, it->second));
+                }
+                for(auto cPair : prtcInfoTable_.toc())
+                {
+                    if(!verletListsKeys.found(cPair))
+                    {
+                        if(contactZoneInfo::getZoneInfo().size() > 0)
+                        {
+                            for(auto zone : contactZoneInfo::getZoneInfo().toc())
+                            {
+                                if(oldContactCentersTable_.found(cPair))
+                                {
+                                    if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair]))
+                                    {
+                                        zoneContactCounter_[zone].first()++; 
+                                        // oldContactCentersTable_.erase(cPair);
+                                        // break;
+                                    }
+                                }
+                            }
+                        }                    
+                        prtcInfoTable_.erase(cPair);
+                        resolvedContacts_++;
+                    }
+                }
+
+            }
+            forAll (immersedBodies_,ib)
+            {
+                immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
+                immersedBodies_[ib].printBodyInfo();
+                // immersedBodies_[ib].computeBodyCoNumber();
+                // if (maxCoNum < immersedBodies_[ib].getCoNum())
+                // {
+                    // maxCoNum = immersedBodies_[ib].getCoNum();
+                    // bodyId = ib;
+                // }
+            }
+            // InfoH << basic_Info << "Max CoNum = " << maxCoNum << " at body " << bodyId << endl;
+
+            pos += step;
+
+            if (pos + step + SMALL >= 1)
+                step = 1 - pos;
         }
-        forAll (immersedBodies_,ib)
+        InfoH << statistics_Info << "-- currently active prt-prt collisions  : " << prtcInfoTable_.size() << endl;
+        InfoH << statistics_Info << "-- number of prt-prt contacts resolved  : " << resolvedContacts_ << endl;
+        InfoH << statistics_Info << "-- currently active prt-wall collisions : " << activeWallContacts_.size() << endl;
+        InfoH << statistics_Info << "-- number of prt-wall contacts resolved : " << resolvedWallContacts_ << endl;
+        // List<string>contactZones =  zoneContactCounter_.toc()
+        for(auto zone : zoneContactCounter_.toc())
         {
-            immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
-            immersedBodies_[ib].printBodyInfo();
-            // immersedBodies_[ib].computeBodyCoNumber();
-            // if (maxCoNum < immersedBodies_[ib].getCoNum())
+            Info << "working on zone " << zone << endl;
+            // label activeZonePrtContacts(0);
+            // label activeZoneWallContacts(0);
+            InfoH << statistics_Info << "-- number of prt-prt contacts resolved in zone " << zone << " :  " << zoneContactCounter_[zone].first() << endl;
+            InfoH << statistics_Info << "-- number of prt-wall contacts resolved in zone " << zone << " : " << zoneContactCounter_[zone].second() << endl;
+            // for(auto cPair : prtcInfoTable_.toc())
             // {
-                // maxCoNum = immersedBodies_[ib].getCoNum();
-                // bodyId = ib;
+            //     if(oldContactCentersTable_.found(cPair))
+            //     {
+            //         if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair]))
+            //         {
+            //             activeZonePrtContacts++;
+            //         }
+            //     }
+
             // }
+            // forAll(immersedBodies_,IB)
+            // {
+            //     label bodyId = immersedBodies_[IB].getBodyId();
+            //     if(oldWallContactCentersTable_.found(bodyId))
+            //     {
+            //         if(contactZoneInfo::getZoneInfo()[zone].contains(oldWallContactCentersTable_[bodyId]))
+            //         {
+            //             activeZoneWallContacts++;
+            //         }
+            //     }
+            // }
+            // InfoH << statistics_Info << "-- currently active prt-prt collisions in zone " << zone << " :  " << activeZonePrtContacts << endl;
+            // InfoH << statistics_Info << "-- currently active prt-wall collisions in zone " << zone << " : " << activeZoneWallContacts << endl;
+
         }
-        // InfoH << basic_Info << "Max CoNum = " << maxCoNum << " at body " << bodyId << endl;
-
-        pos += step;
-
-        if (pos + step + SMALL >= 1)
-            step = 1 - pos;
-    }
-    InfoH << statistics_Info << "-- currently active prt-prt collisions " << prtcInfoTable_.size() << endl;
-    InfoH << statistics_Info << "-- number of prt-prt contacts resolved " << resolvedContacts_ << endl;
-    InfoH << statistics_Info << "-- currently active prt-wall collisions " << activeWallContacts_.size() << endl;
-    InfoH << statistics_Info << "-- number of prt-wall contacts resolved " << resolvedWallContacts_ << endl;
 }
-//---------------------------------------------------------------------------//
+
+//--------------------------------------------------------------------------//
 prtContactInfo& openHFDIBDEM::getPrtcInfo(Tuple2<label,label> cPair)
 {
     if(!prtcInfoTable_.found(cPair))
