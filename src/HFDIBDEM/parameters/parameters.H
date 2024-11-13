@@ -76,6 +76,11 @@ std::map<string, string> cyclicPlaneInfo::cyclicPatchPairs_ =
 HashTable<boundBox,string,Hash<string>> contactZoneInfo::contactZoneInfo_ =
     HashTable<boundBox,string,Hash<string>>();
 
+HashTable<List<DynamicList<label>>,string,Hash<string>> contactZoneInfo::contactZoneCells_ =
+    HashTable<List<DynamicList<label>>,string,Hash<string>>();
+
+    
+
 scalar virtualMeshLevel::virtualMeshLevel_ = 1;
 scalar virtualMeshLevel::levelOfDivision_ = 1;
 scalar virtualMeshLevel::charCellSize_ = 1;

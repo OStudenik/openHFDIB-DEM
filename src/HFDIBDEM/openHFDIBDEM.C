@@ -224,11 +224,43 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
         {
             vector minPoint = counterZones.subDict(zoneNames[zone]).lookup("minPoint");
             vector maxPoint = counterZones.subDict(zoneNames[zone]).lookup("maxPoint");
-
+            boundBox zoneBB = boundBox(minPoint,maxPoint);
+            List<DynamicLabelList> zoneCells(Pstream::nProcs());
+            labelHashSet zoneCellsSet;
+            List<vector> bbPoints = zoneBB.points();
+            for(auto bbPoint : bbPoints)
+            {
+                label cellID = mesh_.findCell(bbPoint);
+                if(cellID > -1 && !zoneCellsSet.found(cellID))
+                {
+                    autoPtr<DynamicLabelList> nextToCheck(new DynamicLabelList);
+                    autoPtr<DynamicLabelList> auxToCheck(new DynamicLabelList);
+                    nextToCheck->append(mesh_.cellCells()[cellID]);
+                    while (nextToCheck->size() > 0)
+                    {
+                        auxToCheck->clear();
+                        forAll(nextToCheck(),cellToCheck)
+                        {
+                            label cCell = nextToCheck()[cellToCheck];
+                            if (!zoneCellsSet.found(cCell) && zoneBB.contains(mesh_.C()[cCell]))
+                            {
+                                zoneCells[Pstream::myProcNo()].append(cCell);
+                                zoneCellsSet.insert(cCell);
+                                const labelList& neigh = mesh_.cellCells()[cCell];
+                                auxToCheck->append(neigh);
+                            }
+                        }
+                        const autoPtr<DynamicLabelList> helpPtr(nextToCheck.ptr());
+                        nextToCheck.set(auxToCheck.ptr());
+                        auxToCheck = helpPtr;
+                    }
+                }
+            }
+            
             contactZoneInfo::insert(
                 zoneNames[zone],
-                minPoint,
-                maxPoint
+                zoneBB,
+                zoneCells
             );
 
             zoneContactCounter_.insert(zoneNames[zone],Tuple2<label,label>(0,0));
@@ -1253,35 +1285,35 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         for(auto zone : zoneContactCounter_.toc())
         {
             Info << "working on zone " << zone << endl;
-            // label activeZonePrtContacts(0);
-            // label activeZoneWallContacts(0);
             InfoH << statistics_Info << "-- number of prt-prt contacts resolved in zone " << zone << " :  " << zoneContactCounter_[zone].first() << endl;
             InfoH << statistics_Info << "-- number of prt-wall contacts resolved in zone " << zone << " : " << zoneContactCounter_[zone].second() << endl;
-            // for(auto cPair : prtcInfoTable_.toc())
-            // {
-            //     if(oldContactCentersTable_.found(cPair))
-            //     {
-            //         if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair]))
-            //         {
-            //             activeZonePrtContacts++;
-            //         }
-            //     }
+            label nParticles(0);
+            forAll(immersedBodies_,ib)
+            {
+                if(immersedBodies_[ib].getIsActive())
+                {
+                    if(contactZoneInfo::getZoneInfo()[zone].contains(immersedBodies_[ib].getGeomModel().getCoM()))
+                    {
+                        nParticles++;
+                    }
+                }
+            }
 
-            // }
-            // forAll(immersedBodies_,IB)
-            // {
-            //     label bodyId = immersedBodies_[IB].getBodyId();
-            //     if(oldWallContactCentersTable_.found(bodyId))
-            //     {
-            //         if(contactZoneInfo::getZoneInfo()[zone].contains(oldWallContactCentersTable_[bodyId]))
-            //         {
-            //             activeZoneWallContacts++;
-            //         }
-            //     }
-            // }
-            // InfoH << statistics_Info << "-- currently active prt-prt collisions in zone " << zone << " :  " << activeZonePrtContacts << endl;
-            // InfoH << statistics_Info << "-- currently active prt-wall collisions in zone " << zone << " : " << activeZoneWallContacts << endl;
+            InfoH << statistics_Info << "-- number of particles in zone " << zone << " : " << nParticles << endl;
 
+            label presentLambda(0);
+            label presentVolume(0);
+
+            for(auto iCell : contactZoneInfo::getZoneCells()[zone][Pstream::myProcNo()])
+            {
+                presentLambda += body[iCell];
+                presentVolume++;
+            }
+
+            reduce(presentLambda,sumOp<label>());
+            reduce(presentVolume,sumOp<label>());
+
+            InfoH << statistics_Info << "-- lambda based porosity in zone " << zone << " : " << double(presentLambda)/presentVolume << endl;
         }
 }
 

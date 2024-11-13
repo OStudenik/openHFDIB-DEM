@@ -55,17 +55,24 @@ class contactZoneInfo
         return contactZoneInfo_;
     }
 
+    static const HashTable<List<DynamicList<label>>,string,Hash<string>>& getZoneCells()
+    {
+        return contactZoneCells_;
+    }
+
     static void insert(
         const string& contactZone,
-        const vector& minPoint,
-        const vector& maxPoint
+        const boundBox& zoneBB,
+        const List<DynamicList<label>>& zoneCells
     )
     {
-        contactZoneInfo_.insert(contactZone,boundBox(minPoint,maxPoint));
+        contactZoneInfo_.insert(contactZone,zoneBB);
+        contactZoneCells_.insert(contactZone,zoneCells);
     };
 
     //- Hash table for storing zone boundBox 
     static HashTable<boundBox,string,Hash<string>> contactZoneInfo_;
+    static HashTable<List<DynamicList<label>>,string,Hash<string>> contactZoneCells_;
 
 };
 
