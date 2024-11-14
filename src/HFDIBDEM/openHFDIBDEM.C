@@ -1301,17 +1301,17 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
 
             InfoH << statistics_Info << "-- number of particles in zone " << zone << " : " << nParticles << endl;
 
-            label presentLambda(0);
-            label presentVolume(0);
+            scalar presentLambda(0);
+            scalar presentVolume(0);
 
             for(auto iCell : contactZoneInfo::getZoneCells()[zone][Pstream::myProcNo()])
             {
-                presentLambda += body[iCell];
-                presentVolume++;
+                presentLambda += body[iCell] * mesh_.V()[iCell];
+                presentVolume += mesh_.V()[iCell];
             }
 
-            reduce(presentLambda,sumOp<label>());
-            reduce(presentVolume,sumOp<label>());
+            reduce(presentLambda,sumOp<scalar>());
+            reduce(presentVolume,sumOp<scalar>());
 
             InfoH << statistics_Info << "-- lambda based porosity in zone " << zone << " : " << double(presentLambda)/presentVolume << endl;
         }
