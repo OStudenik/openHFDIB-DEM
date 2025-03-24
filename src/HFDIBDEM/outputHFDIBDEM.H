@@ -57,7 +57,8 @@ namespace outputHFDIBDEM
         DEM_Info,
         addModel_Info,
         parallelDEM_Info,
-        statistics_Info
+        statistics_Info,
+        periodic_Info
     };
 
     class
@@ -72,6 +73,7 @@ namespace outputHFDIBDEM
         bool print;
         bool printParDEM;
         bool printStatistics;
+        bool printPeriodic;
 
         HashTable<bool, outputType,Hash<label>> outputTable;
 
@@ -87,6 +89,7 @@ namespace outputHFDIBDEM
             print = true;
             printParDEM = true;
             printStatistics = true;
+            printPeriodic = true;
 
             outputTable.insert(basic_Info, printBasic);
             outputTable.insert(iB_Info, printIb);
@@ -94,11 +97,12 @@ namespace outputHFDIBDEM
             outputTable.insert(addModel_Info, printAddModel);
             outputTable.insert(parallelDEM_Info, printParallelDEM);
             outputTable.insert(statistics_Info, printStatistics);
+            outputTable.insert(periodic_Info, printPeriodic);
         }
         // Destructors -----------------------------------------------------
         ~InfoHFDIBDEM(){}
 
-        void setOutput(bool basicB, bool ibB, bool demB, bool addModelB, bool parDEMB, bool statisticsB)
+        void setOutput(bool basicB, bool ibB, bool demB, bool addModelB, bool parDEMB, bool statisticsB, bool periodicB)
 
         {
             outputTable[basic_Info] = basicB;
@@ -107,6 +111,7 @@ namespace outputHFDIBDEM
             outputTable[addModel_Info] = addModelB;
             outputTable[parallelDEM_Info] = parDEMB;
             outputTable[statistics_Info] = statisticsB;
+            outputTable[periodic_Info] = periodicB;
         }
 
         InfoHFDIBDEM& operator<<(const outputType& data)

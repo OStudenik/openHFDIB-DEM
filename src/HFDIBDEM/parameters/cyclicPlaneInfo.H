@@ -63,11 +63,11 @@ class cyclicPlaneInfo
 
         vector transVec = cyclicPlaneInfo_[cyclicPatchNeighbour][1] - cyclicPlaneInfo_[cyclicPatch][1];
 
-        Info << "transVec1: " << transVec << endl;
+        InfoH << periodic_Info << "transVec1: " << transVec << endl;
 
         transVec = cyclicPlaneInfo_[cyclicPatch][0] * (transVec & cyclicPlaneInfo_[cyclicPatch][0]);
 
-        Info << "transVec2: " << transVec << endl;
+        InfoH << periodic_Info << "transVec2: " << transVec << endl;
 
         return transVec;
     }

@@ -222,15 +222,20 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
         
         forAll(zoneNames, zone)
         {
+            // InfoH << statistics_Info << "Contact Counter Zone " << zoneNames[zone] << endl;
             vector minPoint = counterZones.subDict(zoneNames[zone]).lookup("minPoint");
             vector maxPoint = counterZones.subDict(zoneNames[zone]).lookup("maxPoint");
             boundBox zoneBB = boundBox(minPoint,maxPoint);
             List<DynamicLabelList> zoneCells(Pstream::nProcs());
             labelHashSet zoneCellsSet;
             List<vector> bbPoints = zoneBB.points();
+            bbPoints.append(zoneBB.midpoint());
+            label nCellsFound(0);
+            DynamicLabelList cellsReturned;   
             for(auto bbPoint : bbPoints)
             {
                 label cellID = mesh_.findCell(bbPoint);
+                cellsReturned.append(cellID);
                 if(cellID > -1 && !zoneCellsSet.found(cellID))
                 {
                     autoPtr<DynamicLabelList> nextToCheck(new DynamicLabelList);
@@ -246,6 +251,7 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
                             {
                                 zoneCells[Pstream::myProcNo()].append(cCell);
                                 zoneCellsSet.insert(cCell);
+                                nCellsFound++;
                                 const labelList& neigh = mesh_.cellCells()[cCell];
                                 auxToCheck->append(neigh);
                             }
@@ -262,7 +268,8 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
                 zoneBB,
                 zoneCells
             );
-
+            // Pout << "Contact Counter Zone " << zoneNames[zone] << " has " << nCellsFound << " cells" << endl;
+            // Pout << "Contact Counter Zone " << zoneNames[zone] << " has " << cellsReturned << " initialGuessCells" << endl;
             zoneContactCounter_.insert(zoneNames[zone],Tuple2<label,label>(0,0));
         }
     }
@@ -347,9 +354,15 @@ void openHFDIBDEM::initialize
         bool addModelOutput = readBool(outputDic.lookup("addModel"));
         bool parallelDEMOutput = readBool(outputDic.lookup("parallelDEM"));
         bool statisticsOutput = false;
+        bool periodicOutput = false;
         if(outputDic.found("statistics"))
         {
             statisticsOutput = readBool(outputDic.lookup("statistics"));
+        }
+
+        if(outputDic.found("periodic"))
+        {
+            periodicOutput = readBool(outputDic.lookup("periodic"));
         }
 
         InfoH.setOutput(
@@ -358,7 +371,8 @@ void openHFDIBDEM::initialize
             DEMoutput,
             addModelOutput,
             parallelDEMOutput,
-            statisticsOutput
+            statisticsOutput,
+            periodicOutput
         );
     }
 
@@ -758,7 +772,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                     immersedBodies_[bodyId].getGeomModelPtr() = newPeriodicBody;
 
                     verletList_.addBodyToVList(immersedBodies_[bodyId]);
-                    Info << "Periodic body created for body " << bodyId << endl;
+                    InfoH << periodic_Info << "Periodic body created for body " << bodyId << endl;
                 }
             }
             else
@@ -772,7 +786,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                     immersedBodies_[bodyId].getGeomModelPtr() = cBody.getRemGeomModel();
 
                     verletList_.addBodyToVList(immersedBodies_[bodyId]);
-                    Info << "Periodic body unclustered for body " << bodyId << endl;
+                    InfoH << periodic_Info << "Periodic body unclustered for body " << bodyId << endl;
                 }
             }
         }
@@ -1303,17 +1317,21 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
 
             scalar presentLambda(0);
             scalar presentVolume(0);
-
+            // label zoneCounter(0);
             for(auto iCell : contactZoneInfo::getZoneCells()[zone][Pstream::myProcNo()])
             {
+                // zoneCounter++;
                 presentLambda += body[iCell] * mesh_.V()[iCell];
                 presentVolume += mesh_.V()[iCell];
             }
 
             reduce(presentLambda,sumOp<scalar>());
             reduce(presentVolume,sumOp<scalar>());
-
-            InfoH << statistics_Info << "-- lambda based porosity in zone " << zone << " : " << double(presentLambda)/presentVolume << endl;
+            // reduce(zoneCounter,sumOp<label>());
+            // InfoH << statistics_Info << "-- zoneCounter value        "<< zoneCounter << endl;
+            // InfoH << statistics_Info << "-- lambda value for the box "<< double(presentLambda) << endl;
+            // InfoH << statistics_Info << "-- Volume value for the box "<< presentVolume << endl;
+            InfoH << statistics_Info << "-- lambda based volume fraction in zone " << zone << " : " << 1 - double(presentLambda)/(presentVolume+SMALL) << endl;
         }
 }
 
