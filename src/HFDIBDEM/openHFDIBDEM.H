@@ -132,8 +132,10 @@ namespace Foam
     labelHashSet activeWallContacts_;
     label resolvedWallContacts_ = 0;
     HashTable<Tuple2<label,label>,string,Hash<string>> zoneContactCounter_;
-    HashTable <vector,Tuple2<label, label>,Hash<Tuple2<label, label>>> oldContactCentersTable_;
+    // HashTable <vector,Tuple2<label, label>,Hash<Tuple2<label, label>>> oldContactCentersTable_;
+    HashTable <DynamicVectorList,Tuple2<label, label>,Hash<Tuple2<label, label>>> oldContactCentersTable_;
     HashTable<vector,label,Hash<label>> oldWallContactCentersTable_;    
+    // HashTable<vector,Tuple2<label,label>,Hash<Tuple2<label,label>>> terminatedCollisionsTable_;    
     
     public:
 
@@ -176,7 +178,7 @@ namespace Foam
 
     void recreateBodies(volScalarField& body,volScalarField& refineF);
     // void for DEM inner-loops
-    void updateDEM(volScalarField& body,volScalarField& refineF);
+    void updateDEM(volScalarField& body,volScalarField& refineF, volScalarField& contactField);
 
     prtContactInfo& getPrtcInfo(Tuple2<label,label> cPair);
 

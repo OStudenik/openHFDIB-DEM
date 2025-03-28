@@ -29,11 +29,12 @@ nSolidsInDomain 	100;
 
 outputSetup
 {
-    basic 			true;
-    iB  			true;
+    basic 			false;
+    iB  		 	false;
     DEM 			false;
     addModel 		false;
     parallelDEM 	false;
+    statistics true;
 }
 DEM
 {
@@ -94,6 +95,14 @@ DEM
 					planePoint (0.0 0.0 -0.015);
 				}
     }
+	contactCounterZones
+    {
+        box1
+        {
+            minPoint (-0.015 -0.05 -0.015);
+            maxPoint (0.015 0.05 0.015);
+        }
+	}
 }
 
 bodysphere

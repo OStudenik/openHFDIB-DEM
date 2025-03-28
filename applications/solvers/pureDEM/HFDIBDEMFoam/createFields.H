@@ -56,6 +56,21 @@ volScalarField refineF
     dimensionedScalar("zero",dimless,0)
 );
 
+Info << "Creating contactCounterField\n" << endl;
+volScalarField contactCounter
+(
+    IOobject
+    (
+        "contactCounter",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("zero",dimless,0)
+);
+
 
 #include "createPhi.H"
 

@@ -743,7 +743,7 @@ void openHFDIBDEM::writeBodiesInfo()
 
 }
 //---------------------------------------------------------------------------//
-void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
+void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF, volScalarField& contactField)
 {
     if (cyclicPlaneInfo::getCyclicPlaneInfo().size() > 0)
     {
@@ -801,6 +801,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
     HashTable <label,Tuple2<label, label>,Hash<Tuple2<label, label>>> syncOutForceKeyTable;
     HashTable <label,Tuple2<label, label>,Hash<Tuple2<label, label>>> contactResolvedKeyTable;
     HashTable <label,label,Hash<label>> wallContactIBTable;
+    HashTable<vector,Tuple2<label,label>,Hash<Tuple2<label,label>>> terminatedCollisionsTable;   
     while( pos < 1)
     {
         bodiesPositionList[Pstream::myProcNo()].clear();
@@ -833,7 +834,6 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                 }
             }
         }
-
         Pstream::gatherList(bodiesPositionList,0);
         Pstream::scatterList(bodiesPositionList,0);
 
@@ -862,7 +862,6 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         DynamicLabelList wallContactIB;
         wallContactIBTable.clear();
         labelHashSet addedWallContacts;
-
         forAll (immersedBodies_,bodyId)
         {
             immersedBody& cIb(immersedBodies_[bodyId]);
@@ -957,7 +956,6 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                     wallContactCenterList[assignProc] += sCW->getWallCntVars().contactCenter_;
                 }
             }
-
             reduce(wallContactResolvedList,sumOp<List<bool>>());
             reduce(wallContactCenterList,sumOp<List<vector>>());
 
@@ -1005,7 +1003,6 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                 cIb.getWallCntInfo().clearOldContact();
             }
         }
-
         wallContactIB.clear();
 
         DynamicList<prtSubContactInfo*> contactList;
@@ -1049,7 +1046,6 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
             }
             vListSize++;
         }
-
         List<bool> contactResolved(contactList.size(),false);
         List<label> contactResolvedcKey(contactList.size(),0);
         List<label> contactResolvedtKey(contactList.size(),0);
@@ -1089,7 +1085,6 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
                 }
             }
         }
-
         reduce(contactResolved,sumOp<List<bool>>());
         reduce(contactResolvedcKey,sumOp<List<label>>());
         reduce(contactResolvedtKey,sumOp<List<label>>());
@@ -1099,11 +1094,13 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         {
             if(oldContactCentersTable_.found(Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey])))
             {
-                oldContactCentersTable_[Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey])] = contactCenterList[cKey];
+                oldContactCentersTable_[Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey])].append(contactCenterList[cKey]);
             }
             else
             {
-                oldContactCentersTable_.insert(Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey]),contactCenterList[cKey]);
+                DynamicVectorList ccList;
+                ccList.append(contactCenterList[cKey]);
+                oldContactCentersTable_.insert(Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey]),ccList);
             }
 
             contactResolvedKeyTable.insert(Tuple2<label, label>(contactResolvedcKey[cKey],contactResolvedtKey[cKey]),cKey);
@@ -1113,7 +1110,6 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         List<vector> tBodyOutForceList(vListSize,vector::zero);
         List<vector> tBodyOutTorqueList(vListSize,vector::zero);
         syncOutForceKeyTable.clear();
-
         label nIter(0);
         for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
         {
@@ -1143,196 +1139,295 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF)
         reduce(cBodyOutTorqueList,sumOp<List<vector>>());
         reduce(tBodyOutForceList,sumOp<List<vector>>());
         reduce(tBodyOutTorqueList,sumOp<List<vector>>());
-        
         label nvListIter(0);
         // InfoH << basic_Info << " --Info#1 prtCInfoTable_size() : " << prtcInfoTable_.size() << endl;
-            for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
+        for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
+        {
+            const Tuple2<label, label> cPair = Tuple2<label, label>(it->first, it->second);
+            label cInd(cPair.first());
+            label tInd(cPair.second());
+
+            if(!contactResolvedKeyTable.found(cPair))
             {
-                const Tuple2<label, label> cPair = Tuple2<label, label>(it->first, it->second);
-                label cInd(cPair.first());
-                label tInd(cPair.second());
-
-                if(!contactResolvedKeyTable.found(cPair))
+                if(prtcInfoTable_.found(cPair))
                 {
-                    if(prtcInfoTable_.found(cPair))
+                    prtcInfoTable_.erase(cPair);
+                    if(!addedContactPairs_.found(cPair))
                     {
-                        prtcInfoTable_.erase(cPair);
-                        if(!addedContactPairs_.found(cPair))
+                        if(!terminatedCollisionsTable.found(cPair) && oldContactCentersTable_[cPair].size() > 0)
                         {
-                            if(contactZoneInfo::getZoneInfo().size() > 0)
-                            {
-                                for(auto zone : contactZoneInfo::getZoneInfo().toc())
-                                {
-                                    if(oldContactCentersTable_.found(cPair))
-                                    {
-                                        if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair]))
-                                        {
-                                            zoneContactCounter_[zone].first()++; 
-                                            // oldContactCentersTable_.erase(cPair);
-                                            // break;
-                                        }
-                                    }
-                                }
-                            }
-                            resolvedContacts_++;
+                            terminatedCollisionsTable.insert(cPair,vector::zero);
                         }
-                        continue;
-                    }
-                    
-                }
-                else if(contactResolved[contactResolvedKeyTable[cPair]])
-                {
-                    if(!syncOutForceKeyTable.found(cPair))
-                    {
-                        continue;
-                    }
-
-                    nvListIter = syncOutForceKeyTable[cPair];
-                    if(nvListIter > cBodyOutForceList.size())
-                    {
-                        continue;
-                    }
-                    vector F1 = vector::zero;
-                    vector T1 = vector::zero;
-                    vector F2 = vector::zero;
-                    vector T2 = vector::zero;
-
-                    F1 += cBodyOutForceList[nvListIter];
-                    T1 += cBodyOutTorqueList[nvListIter];
-                    F2 += tBodyOutForceList[nvListIter];
-                    T2 += tBodyOutTorqueList[nvListIter];
-
-                    forces cF;
-                    cF.F = F1;
-                    cF.T = T1;
-                    forces tF;
-                    tF.F = F2;
-                    tF.T = T2;
-
-                    immersedBodies_[cInd].updateContactForces(cF);
-                    immersedBodies_[tInd].updateContactForces(tF);
-                }
-                else
-                {
-                    if(prtcInfoTable_.found(cPair))
-                    {
-                        prtcInfoTable_.erase(cPair);
-                        if(!addedContactPairs_.found(cPair))
-                        {
-                            if(contactZoneInfo::getZoneInfo().size() > 0)
-                            {
-                                for(auto zone : contactZoneInfo::getZoneInfo().toc())
-                                {
-                                    if(oldContactCentersTable_.found(cPair))
-                                    {
-                                        if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair]))
-                                        {
-                                            zoneContactCounter_[zone].first()++; 
-                                            // oldContactCentersTable_.erase(cPair);
-                                            // break;
-                                        }
-                                    }
-                                }
-                            }
-                            resolvedContacts_++;
-                        }
-                        continue;
-                    }
-                    
-                }
-            }
-            if (prtcInfoTable_.size() > vListSize)
-            {
-                Tuple2HashSet verletListsKeys;
-                for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
-                {
-                    verletListsKeys.insert(Tuple2<label, label>(it->first, it->second));
-                }
-                for(auto cPair : prtcInfoTable_.toc())
-                {
-                    if(!verletListsKeys.found(cPair))
-                    {
                         if(contactZoneInfo::getZoneInfo().size() > 0)
                         {
                             for(auto zone : contactZoneInfo::getZoneInfo().toc())
                             {
                                 if(oldContactCentersTable_.found(cPair))
                                 {
-                                    if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair]))
+                                    // Info << "working on zone " << zone << " before " <<zoneContactCounter_[zone].first()<< " Point "<< oldContactCentersTable_[cPair].last() <<endl;
+                                    // Info << "working on zone " << zone << " minBound " <<contactZoneInfo::getZoneInfo()[zone].min()<< " maxBound " <<contactZoneInfo::getZoneInfo()[zone].max() << endl;
+                                    // Info << "working on zone " << zone << " contains " <<contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair].last()) << endl;
+                                    if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair].last()))
                                     {
                                         zoneContactCounter_[zone].first()++; 
-                                        // oldContactCentersTable_.erase(cPair);
+                                    }
+                                    // Info << "working on zone " << zone << "after " <<zoneContactCounter_[zone].first()<< endl;
+                                }
+                            }
+                        }
+                        resolvedContacts_++;
+                    }
+                    continue;
+                }
+                
+            }
+            else if(contactResolved[contactResolvedKeyTable[cPair]])
+            {
+                if(!syncOutForceKeyTable.found(cPair))
+                {
+                    continue;
+                }
+
+                nvListIter = syncOutForceKeyTable[cPair];
+                if(nvListIter > cBodyOutForceList.size())
+                {
+                    continue;
+                }
+                vector F1 = vector::zero;
+                vector T1 = vector::zero;
+                vector F2 = vector::zero;
+                vector T2 = vector::zero;
+
+                F1 += cBodyOutForceList[nvListIter];
+                T1 += cBodyOutTorqueList[nvListIter];
+                F2 += tBodyOutForceList[nvListIter];
+                T2 += tBodyOutTorqueList[nvListIter];
+
+                forces cF;
+                cF.F = F1;
+                cF.T = T1;
+                forces tF;
+                tF.F = F2;
+                tF.T = T2;
+
+                immersedBodies_[cInd].updateContactForces(cF);
+                immersedBodies_[tInd].updateContactForces(tF);
+            }
+            else
+            {
+                if(prtcInfoTable_.found(cPair))
+                {
+                    prtcInfoTable_.erase(cPair);
+                    if(!addedContactPairs_.found(cPair))
+                    {
+                        if(!terminatedCollisionsTable.found(cPair) && oldContactCentersTable_[cPair].size() > 0)
+                        {
+                            terminatedCollisionsTable.insert(cPair,vector::zero);
+                        }
+                        if(contactZoneInfo::getZoneInfo().size() > 0)
+                        {
+                            for(auto zone : contactZoneInfo::getZoneInfo().toc())
+                            {
+                                if(oldContactCentersTable_.found(cPair))
+                                {
+                                    if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair].last()))
+                                    {
+                                        zoneContactCounter_[zone].first()++;
                                         // break;
                                     }
                                 }
                             }
-                        }                    
-                        prtcInfoTable_.erase(cPair);
+                        }
                         resolvedContacts_++;
                     }
+                    continue;
                 }
-
+                
             }
-            forAll (immersedBodies_,ib)
-            {
-                immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
-                immersedBodies_[ib].printBodyInfo();
-                // immersedBodies_[ib].computeBodyCoNumber();
-                // if (maxCoNum < immersedBodies_[ib].getCoNum())
-                // {
-                    // maxCoNum = immersedBodies_[ib].getCoNum();
-                    // bodyId = ib;
-                // }
-            }
-            // InfoH << basic_Info << "Max CoNum = " << maxCoNum << " at body " << bodyId << endl;
-
-            pos += step;
-
-            if (pos + step + SMALL >= 1)
-                step = 1 - pos;
         }
-        InfoH << statistics_Info << "-- currently active prt-prt collisions  : " << prtcInfoTable_.size() << endl;
-        InfoH << statistics_Info << "-- number of prt-prt contacts resolved  : " << resolvedContacts_ << endl;
-        InfoH << statistics_Info << "-- currently active prt-wall collisions : " << activeWallContacts_.size() << endl;
-        InfoH << statistics_Info << "-- number of prt-wall contacts resolved : " << resolvedWallContacts_ << endl;
-        // List<string>contactZones =  zoneContactCounter_.toc()
-        for(auto zone : zoneContactCounter_.toc())
+        if (prtcInfoTable_.size() > vListSize)
         {
-            Info << "working on zone " << zone << endl;
-            InfoH << statistics_Info << "-- number of prt-prt contacts resolved in zone " << zone << " :  " << zoneContactCounter_[zone].first() << endl;
-            InfoH << statistics_Info << "-- number of prt-wall contacts resolved in zone " << zone << " : " << zoneContactCounter_[zone].second() << endl;
-            label nParticles(0);
-            forAll(immersedBodies_,ib)
+            Tuple2HashSet verletListsKeys;
+            for (auto it = verletList_.begin(); it != verletList_.end(); ++it)
             {
-                if(immersedBodies_[ib].getIsActive())
+                verletListsKeys.insert(Tuple2<label, label>(it->first, it->second));
+            }
+            for(auto cPair : prtcInfoTable_.toc())
+            {
+                if(!verletListsKeys.found(cPair))
                 {
-                    if(contactZoneInfo::getZoneInfo()[zone].contains(immersedBodies_[ib].getGeomModel().getCoM()))
+                    if(!terminatedCollisionsTable.found(cPair) && oldContactCentersTable_[cPair].size() > 0)
                     {
-                        nParticles++;
+                        terminatedCollisionsTable.insert(cPair,vector::zero);
+                    }
+                    if(contactZoneInfo::getZoneInfo().size() > 0)
+                    {
+                        for(auto zone : contactZoneInfo::getZoneInfo().toc())
+                        {
+                            if(oldContactCentersTable_.found(cPair))
+                            {
+                                if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair].last()))
+                                {
+                                    zoneContactCounter_[zone].first()++; 
+                                }
+                            }
+                        }
+                    }                    
+                    prtcInfoTable_.erase(cPair);
+                    resolvedContacts_++;
+                }
+            }
+        }
+        forAll (immersedBodies_,ib)
+        {
+            immersedBodies_[ib].updateMovement(deltaTime*step*0.5);
+            immersedBodies_[ib].printBodyInfo();
+            // immersedBodies_[ib].computeBodyCoNumber();
+            // if (maxCoNum < immersedBodies_[ib].getCoNum())
+            // {
+                // maxCoNum = immersedBodies_[ib].getCoNum();
+                // bodyId = ib;
+            // }
+        }
+        // InfoH << basic_Info << "Max CoNum = " << maxCoNum << " at body " << bodyId << endl;
+
+        pos += step;
+
+        if (pos + step + SMALL >= 1)
+            step = 1 - pos;
+    }
+    InfoH << statistics_Info << "-- currently active prt-prt collisions  : " << prtcInfoTable_.size() << endl;
+    InfoH << statistics_Info << "-- number of prt-prt contacts resolved  : " << resolvedContacts_ << endl;
+    InfoH << statistics_Info << "-- currently active prt-wall collisions : " << activeWallContacts_.size() << endl;
+    InfoH << statistics_Info << "-- number of prt-wall contacts resolved : " << resolvedWallContacts_ << endl;
+    // List<string>contactZones =  zoneContactCounter_.toc()
+    for(auto zone : zoneContactCounter_.toc())
+    {
+        Info << "working on zone " << zone << endl;
+        InfoH << statistics_Info << "-- number of prt-prt contacts resolved in zone " << zone << " :  " << zoneContactCounter_[zone].first() << endl;
+        InfoH << statistics_Info << "-- number of prt-wall contacts resolved in zone " << zone << " : " << zoneContactCounter_[zone].second() << endl;
+        label nParticles(0);
+        forAll(immersedBodies_,ib)
+        {
+            if(immersedBodies_[ib].getIsActive())
+            {
+                if(contactZoneInfo::getZoneInfo()[zone].contains(immersedBodies_[ib].getGeomModel().getCoM()))
+                {
+                    nParticles++;
+                }
+            }
+        }
+
+        InfoH << statistics_Info << "-- number of particles in zone " << zone << " : " << nParticles << endl;
+        scalar presentLambda(0);
+        scalar presentVolume(0);
+        for(auto iCell : contactZoneInfo::getZoneCells()[zone][Pstream::myProcNo()])
+        {
+            presentLambda += body[iCell] * mesh_.V()[iCell];
+            presentVolume += mesh_.V()[iCell];
+        }
+
+        reduce(presentLambda,sumOp<scalar>());
+        reduce(presentVolume,sumOp<scalar>());
+        InfoH << statistics_Info << "-- lambda based porosity fraction in zone " << zone << " : " << 1 - double(presentLambda)/(presentVolume+SMALL) << endl;
+    }
+    InfoH << statistics_Info << "-- number of prt-prt terminatedCollisionsTable.toc()) " << terminatedCollisionsTable.size() << endl;
+    // label modifiedFIeldalue(0);
+    for(auto tCPair : terminatedCollisionsTable.toc())
+    {
+        terminatedCollisionsTable[tCPair] = vector::zero;
+        if(!oldContactCentersTable_.found(tCPair))
+        {
+            terminatedCollisionsTable.erase(tCPair);
+            continue;
+        }
+        for (auto oldCP :oldContactCentersTable_[tCPair])
+        {
+            terminatedCollisionsTable[tCPair] += oldCP;
+        }
+        terminatedCollisionsTable[tCPair] /= oldContactCentersTable_[tCPair].size();
+        oldContactCentersTable_.erase(tCPair);
+        
+        immersedBody& cBody(immersedBodies_[tCPair.first()]);
+        immersedBody& tBody(immersedBodies_[tCPair.second()]);
+        
+        bool shouldIcheck = true;
+        bool wasCounted = false;
+        if(cBody.getIsActive())
+        {
+            if(cBody.getGeomModel().getBounds().contains(terminatedCollisionsTable[tCPair]))
+            {
+                for(auto cell : cBody.getGeomModel().getSurfaceCellList()[Pstream::myProcNo()])
+                {
+                    if(mag(mesh_.C()[cell] - terminatedCollisionsTable[tCPair]) <= pow(mesh_.V()[cell],1./3)*0.75 && !wasCounted)
+                    {
+                        shouldIcheck = false;
+                        contactField[cell]+= 1;
+                        // modifiedFIeldalue++;
+                        wasCounted = true;
+                        break;
                     }
                 }
-            }
-
-            InfoH << statistics_Info << "-- number of particles in zone " << zone << " : " << nParticles << endl;
-
-            scalar presentLambda(0);
-            scalar presentVolume(0);
-            // label zoneCounter(0);
-            for(auto iCell : contactZoneInfo::getZoneCells()[zone][Pstream::myProcNo()])
-            {
-                // zoneCounter++;
-                presentLambda += body[iCell] * mesh_.V()[iCell];
-                presentVolume += mesh_.V()[iCell];
-            }
-
-            reduce(presentLambda,sumOp<scalar>());
-            reduce(presentVolume,sumOp<scalar>());
-            // reduce(zoneCounter,sumOp<label>());
-            // InfoH << statistics_Info << "-- zoneCounter value        "<< zoneCounter << endl;
-            // InfoH << statistics_Info << "-- lambda value for the box "<< double(presentLambda) << endl;
-            // InfoH << statistics_Info << "-- Volume value for the box "<< presentVolume << endl;
-            InfoH << statistics_Info << "-- lambda based volume fraction in zone " << zone << " : " << 1 - double(presentLambda)/(presentVolume+SMALL) << endl;
+                for(auto cell : cBody.getGeomModel().getInternalCellList()[Pstream::myProcNo()])
+                {
+                    if(mag(mesh_.C()[cell] - terminatedCollisionsTable[tCPair]) <= pow(mesh_.V()[cell],1./3)*0.75&& !wasCounted)
+                    {
+                        shouldIcheck = false;
+                        contactField[cell]+= 1;
+                        // modifiedFIeldalue++;
+                        wasCounted = true;
+                        break;
+                    }
+                }
+            }     
         }
+        reduce(shouldIcheck,andOp<bool>());
+        reduce(wasCounted,orOp<bool>());
+        if(tBody.getIsActive())
+        {
+            if(tBody.getGeomModel().getBounds().contains(terminatedCollisionsTable[tCPair]))
+            {
+                for(auto cell : tBody.getGeomModel().getSurfaceCellList()[Pstream::myProcNo()])
+                {
+                    if(mag(mesh_.C()[cell] - terminatedCollisionsTable[tCPair]) <= pow(mesh_.V()[cell],1./3)*0.75 && !wasCounted)
+                    {
+                        shouldIcheck = false;
+                        contactField[cell]+= 1;
+                        // modifiedFIeldalue++;
+                        wasCounted = true;
+                        break;
+                    }
+                }
+                for(auto cell : tBody.getGeomModel().getInternalCellList()[Pstream::myProcNo()])
+                {
+                    if(mag(mesh_.C()[cell] - terminatedCollisionsTable[tCPair]) <= pow(mesh_.V()[cell],1./3)*0.75 && !wasCounted)
+                    {
+                        shouldIcheck = false;
+                        contactField[cell]+= 1;
+                        // modifiedFIeldalue++;
+                        wasCounted = true;
+                        break;
+                    }
+                }
+            }     
+        }     
+        reduce(shouldIcheck,andOp<bool>());
+        reduce(wasCounted,orOp<bool>());
+        if(shouldIcheck)
+        {
+            label avgCellPoint = mesh_.findCell(terminatedCollisionsTable[tCPair]);
+            if(avgCellPoint != -1 && !wasCounted)
+            {
+                contactField[avgCellPoint]+= 1;
+                wasCounted = true;
+                // modifiedFIeldalue++;
+            }
+        }
+        terminatedCollisionsTable.erase(tCPair);
+    }
+    // reduce(modifiedFIeldalue,sumOp<label>());
+
+    // InfoH << statistics_Info << "-- number of terminated Collisions field Value was modified nTimes "<< modifiedFIeldalue <<endl;
 }
 
 //--------------------------------------------------------------------------//

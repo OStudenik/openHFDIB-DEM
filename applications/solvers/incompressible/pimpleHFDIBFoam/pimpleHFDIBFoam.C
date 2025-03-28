@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
         suplTime_ += addRemoveTime.timeIncrement();
 
         clockTime updateDEMTime;
-        HFDIBDEM.updateDEM(lambda,refineF);
+        HFDIBDEM.updateDEM(lambda,refineF,contactCounter);
         DEMTime_ += updateDEMTime.timeIncrement();
         Info << "updated HFDIBDEM" << endl;
 

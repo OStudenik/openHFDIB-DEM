@@ -1,0 +1,74 @@
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
+Running blockMesh on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running decomposePar on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres
+Running HFDIBDEMFoam in parallel on /stonefly2/studenio/PhD_VirtualMesh/Versions/00_openHFDIBDEM_public/tutorials/pureDEM/HFDIBDEMFoam/pouringSpheres using 2 processes
+Created 'pouringSpheres.OpenFOAM'
