@@ -275,9 +275,9 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
                 zoneNames[zone],
                 autoPtr<prtCounterBox>(
                     new prtCounterBox(
-                        readScalar(counterZones.lookup("presenceTime")),
-                        readScalar(counterZones.lookup("screeningTime")),
-                        readScalar(counterZones.lookup("particleDistance"))
+                        readScalar(demDic.subDict("possibleContactFilter").lookup("presenceTime")),
+                        readScalar(demDic.subDict("possibleContactFilter").lookup("screeningTime")),
+                        readScalar(demDic.subDict("possibleContactFilter").lookup("particleDistance"))
                     )
                 )
             );
