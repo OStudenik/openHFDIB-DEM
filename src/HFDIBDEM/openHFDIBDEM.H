@@ -73,6 +73,8 @@ Contributors
 //OS Time effitiency Testing
 #include "clockTime.H"
 //OS Time effitiency Testing
+#include "prtCounterBox.H"
+
 namespace Foam
 {
 
@@ -134,7 +136,9 @@ namespace Foam
     HashTable<Tuple2<label,label>,string,Hash<string>> zoneContactCounter_;
     // HashTable <vector,Tuple2<label, label>,Hash<Tuple2<label, label>>> oldContactCentersTable_;
     HashTable <DynamicVectorList,Tuple2<label, label>,Hash<Tuple2<label, label>>> oldContactCentersTable_;
-    HashTable<vector,label,Hash<label>> oldWallContactCentersTable_;    
+    HashTable<vector,label,Hash<label>> oldWallContactCentersTable_; 
+    HashTable<autoPtr<prtCounterBox>,string,Hash<string>> prtCounterBoxTable_;
+    bool useContactCounterBox_ = false;
     // HashTable<vector,Tuple2<label,label>,Hash<Tuple2<label,label>>> terminatedCollisionsTable_;    
     
     public:

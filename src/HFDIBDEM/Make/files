@@ -35,6 +35,7 @@ ibInterpolation/lineInt/lineIntInfo.C
 ibInterpolation/lineInt/lineInt.C
 ibInterpolation/leastSquaresInt/leastSquaresIntInfo.C
 ibInterpolation/leastSquaresInt/leastSquaresInt.C
+prtCounterBox.C
 immersedBody.C
 openHFDIBDEM.C
 LIB = $(FOAM_USER_LIBBIN)/libHFDIBDEM

@@ -271,6 +271,16 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
             // Pout << "Contact Counter Zone " << zoneNames[zone] << " has " << nCellsFound << " cells" << endl;
             // Pout << "Contact Counter Zone " << zoneNames[zone] << " has " << cellsReturned << " initialGuessCells" << endl;
             zoneContactCounter_.insert(zoneNames[zone],Tuple2<label,label>(0,0));
+            prtCounterBoxTable_.insert(
+                zoneNames[zone],
+                autoPtr<prtCounterBox>(
+                    new prtCounterBox(
+                        readScalar(counterZones.lookup("presenceTime")),
+                        readScalar(counterZones.lookup("screeningTime")),
+                        readScalar(counterZones.lookup("particleDistance"))
+                    )
+                )
+            );
         }
     }
     if(demDic.found("cyclicPatches"))
@@ -795,7 +805,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF, volSc
     scalar deltaTime(mesh_.time().deltaT().value());
     scalar pos(0.0);
     scalar step(stepDEM_);
-    // scalar timeStep(step*deltaTime);
+    scalar timeStep(step*deltaTime);
     List<DynamicList<pointField>> bodiesPositionList(Pstream::nProcs());
     // Infos <<bodiesPositionList.size() << endl;
     HashTable <label,Tuple2<label, label>,Hash<Tuple2<label, label>>> syncOutForceKeyTable;
@@ -1233,6 +1243,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF, volSc
                                     if(contactZoneInfo::getZoneInfo()[zone].contains(oldContactCentersTable_[cPair].last()))
                                     {
                                         zoneContactCounter_[zone].first()++;
+
                                         // break;
                                     }
                                 }
@@ -1314,6 +1325,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF, volSc
                 if(contactZoneInfo::getZoneInfo()[zone].contains(immersedBodies_[ib].getGeomModel().getCoM()))
                 {
                     nParticles++;
+                    prtCounterBoxTable_[zone]->checkStoredParticles(immersedBodies_[ib],timeStep);
                 }
             }
         }
@@ -1330,6 +1342,19 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF, volSc
         reduce(presentLambda,sumOp<scalar>());
         reduce(presentVolume,sumOp<scalar>());
         InfoH << statistics_Info << "-- lambda based porosity fraction in zone " << zone << " : " << 1 - double(presentLambda)/(presentVolume+SMALL) << endl;
+        //runTheParticleScreening
+        prtCounterBoxTable_[zone]->checkPresentParticles();
+        prtCounterBoxTable_[zone]->updateTimeCounter(timeStep);
+        if(prtCounterBoxTable_[zone]->checkTimeCounter())
+        {
+            prtCounterBoxTable_[zone]->runPossibleContactScreening(immersedBodies_);
+            InfoH << statistics_Info << "-- particle contact screening in " << zone << " contacts based on condition#1 : " << prtCounterBoxTable_[zone]->getContactCount().first()  << " contacts based on condition#2 : "<< prtCounterBoxTable_[zone]->getContactCount().second() <<endl;
+        }
+        InfoH << statistics_Info << "-- number of particles in zone " << zone << " : " << prtCounterBoxTable_[zone]->getParticleCount() << endl;
+        InfoH << statistics_Info << "-- longer than resident Time in zone " << zone << " : " << prtCounterBoxTable_[zone]->getCurrentContactReadyCount() << endl;
+        prtCounterBoxTable_[zone]->clearData();
+
+
     }
     InfoH << statistics_Info << "-- number of prt-prt terminatedCollisionsTable.toc()) " << terminatedCollisionsTable.size() << endl;
     // label modifiedFIeldalue(0);
