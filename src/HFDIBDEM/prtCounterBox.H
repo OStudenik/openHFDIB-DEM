@@ -113,6 +113,11 @@ namespace Foam
             activeTime_ += timeStep;
         }
 
+        scalar getActiveTime()
+        {
+            return activeTime_;
+        }
+
         bool checkTimeCounter();
 
         void runPossibleContactScreening

@@ -65,11 +65,12 @@ void prtCounterBox::checkStoredParticles(const immersedBody& ib, const scalar& t
         if(storedParticles_[ib.getBodyId()]->presentTime > contactTime_)
         {
             storedParticles_[ib.getBodyId()]->compContact = false;
+            checkForContact_.append(ib.getBodyId());
         }
         else
         {
             storedParticles_[ib.getBodyId()]->compContact = true;
-            checkForContact_.append(ib.getBodyId());
+
         }
     }
 }
@@ -97,6 +98,7 @@ bool prtCounterBox::checkTimeCounter()
 //---------------------------------------------------------------------------//
 void prtCounterBox::runPossibleContactScreening(PtrList<immersedBody>& immersedBodies)
 {
+    Info << "-- contact Filter -> Number of contact screening particles: " << checkForContact_.size() << endl;
     if(checkForContact_.size() > 2)// it has to be pair
     {
         //createPossibleContactPairs        
@@ -105,14 +107,18 @@ void prtCounterBox::runPossibleContactScreening(PtrList<immersedBody>& immersedB
         {
             forAll(checkForContact_,j)
             {
-                if(i != j && i < j)
+                if(i != j && checkForContact_[i] < checkForContact_[j])
                 {
                     possibleContactPairs.append(Tuple2<label,label>(checkForContact_[i],checkForContact_[j]));
                 }
             }
         }
+
+        // Info << "-- contact Filter -> Number of possible contact pairs: " << possibleContactPairs.size() << endl;
+
         for(auto cPair : possibleContactPairs)
         {
+            // Info << "-- contact Filter -> Checking possible contact pair: " << cPair.first() << " " << cPair.second() << endl;
             if(checkPossibleContact1(immersedBodies[cPair.first()],immersedBodies[cPair.second()]))
             {
                 recordedContactCount_.first()++;
@@ -137,8 +143,15 @@ bool prtCounterBox::checkPossibleContact1
     particleNormal /= mag(particleNormal);
     scalar relVel(mag(cIb.getVel() - tIb.getVel()));
     scalar relVelAngle((cIb.getAxis() - tIb.getAxis()) & particleNormal);
+    // Info << "-- contact Filter -> relVel: " << relVel << " particleNormal: " << particleNormal << endl;
+    // Info << "-- contact Filter -> prtDist: " << prtDist << " relVelAngle: " << relVelAngle << " relVel: " << relVel << endl;
     if(prtDist < particleDistance_ && relVelAngle < 0 && relVel > particleDistance_/screeningTime_)
     {
+        Info << "-- contact Filter -> contact pair: " << cIb.getBodyId() << " " << tIb.getBodyId() << endl;
+        Info << "-- contact Filter -> prtDist: " << prtDist << " relVelAngle: " << relVelAngle << " relVel: " << relVel << endl;
+        Info << "-- contact Filter -> contact normal: " << particleNormal << " magnitude" << particleNormal << endl;
+        Info << "-- contact Filter -> cIb.getVel(): " << cIb.getVel() << " tIb.getVel()" << tIb.getVel() << endl;
+        Info << "-- contact Filter -> cIb.getVel()-tIb.getVel(): " << cIb.getVel() - tIb.getVel() << " mag(cIb.getVel() - tIb.getVel())" << mag(cIb.getVel() - tIb.getVel()) << endl;
         return true;
     }
     return false;

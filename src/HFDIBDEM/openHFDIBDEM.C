@@ -805,7 +805,7 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF, volSc
     scalar deltaTime(mesh_.time().deltaT().value());
     scalar pos(0.0);
     scalar step(stepDEM_);
-    scalar timeStep(step*deltaTime);
+    scalar timeStep(deltaTime);
     List<DynamicList<pointField>> bodiesPositionList(Pstream::nProcs());
     // Infos <<bodiesPositionList.size() << endl;
     HashTable <label,Tuple2<label, label>,Hash<Tuple2<label, label>>> syncOutForceKeyTable;
@@ -1345,8 +1345,10 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF, volSc
         //runTheParticleScreening
         prtCounterBoxTable_[zone]->checkPresentParticles();
         prtCounterBoxTable_[zone]->updateTimeCounter(timeStep);
+        InfoH << statistics_Info << "-- > particleContactContactScreeningTime is  " <<prtCounterBoxTable_[zone]->getActiveTime() << endl;
         if(prtCounterBoxTable_[zone]->checkTimeCounter())
         {
+            InfoH << statistics_Info << "-- particle contact screening is initiated in zone " << zone << endl;
             prtCounterBoxTable_[zone]->runPossibleContactScreening(immersedBodies_);
             InfoH << statistics_Info << "-- particle contact screening in " << zone << " contacts based on condition#1 : " << prtCounterBoxTable_[zone]->getContactCount().first()  << " contacts based on condition#2 : "<< prtCounterBoxTable_[zone]->getContactCount().second() <<endl;
         }
