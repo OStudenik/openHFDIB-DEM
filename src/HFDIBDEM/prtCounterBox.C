@@ -149,7 +149,7 @@ bool prtCounterBox::checkPossibleContact1
     {
         Info << "-- contact Filter -> contact pair: " << cIb.getBodyId() << " " << tIb.getBodyId() << endl;
         Info << "-- contact Filter -> prtDist: " << prtDist << " relVelAngle: " << relVelAngle << " relVel: " << relVel << endl;
-        Info << "-- contact Filter -> contact normal: " << particleNormal << " magnitude" << particleNormal << endl;
+        Info << "-- contact Filter -> contact normal: " << particleNormal << " magnitude" << mag(particleNormal) << endl;
         Info << "-- contact Filter -> cIb.getVel(): " << cIb.getVel() << " tIb.getVel()" << tIb.getVel() << endl;
         Info << "-- contact Filter -> cIb.getVel()-tIb.getVel(): " << cIb.getVel() - tIb.getVel() << " mag(cIb.getVel() - tIb.getVel())" << mag(cIb.getVel() - tIb.getVel()) << endl;
         return true;
