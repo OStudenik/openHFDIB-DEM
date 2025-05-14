@@ -277,7 +277,9 @@ recordSimulation_(readBool(HFDIBDEMDict_.lookup("recordSimulation")))
                     new prtCounterBox(
                         readScalar(demDic.subDict("possibleContactFilter").lookup("presenceTime")),
                         readScalar(demDic.subDict("possibleContactFilter").lookup("screeningTime")),
-                        readScalar(demDic.subDict("possibleContactFilter").lookup("particleDistance"))
+                        readScalar(demDic.subDict("possibleContactFilter").lookup("particleDistance")),
+                        demDic.subDict("possibleContactFilter").lookup("studyPlaneNormal")
+
                     )
                 )
             );

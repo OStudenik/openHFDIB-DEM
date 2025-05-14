@@ -41,11 +41,14 @@ prtCounterBox::prtCounterBox
 (
     const scalar& contactTime,
     const scalar& screeningTime,
-    const scalar& particleDistance
+    const scalar& particleDistance,
+    const vector& studyPlaneNormal
 )
 :
 contactTime_(contactTime),
 screeningTime_(screeningTime),
+particleDistance_(particleDistance),
+studyPlaneNormal_(studyPlaneNormal),
 activeTime_(0),
 storedParticles_(0)
 {}
@@ -143,15 +146,14 @@ bool prtCounterBox::checkPossibleContact1
     particleNormal /= mag(particleNormal);
     scalar relVel(mag(cIb.getVel() - tIb.getVel()));
     scalar relVelAngle((cIb.getAxis() - tIb.getAxis()) & particleNormal);
-    // Info << "-- contact Filter -> relVel: " << relVel << " particleNormal: " << particleNormal << endl;
-    // Info << "-- contact Filter -> prtDist: " << prtDist << " relVelAngle: " << relVelAngle << " relVel: " << relVel << endl;
+
     if(prtDist < particleDistance_ && relVelAngle < 0 && relVel > particleDistance_/screeningTime_)
     {
-        Info << "-- contact Filter -> contact pair: " << cIb.getBodyId() << " " << tIb.getBodyId() << endl;
-        Info << "-- contact Filter -> prtDist: " << prtDist << " relVelAngle: " << relVelAngle << " relVel: " << relVel << endl;
-        Info << "-- contact Filter -> contact normal: " << particleNormal << " magnitude" << mag(particleNormal) << endl;
-        Info << "-- contact Filter -> cIb.getVel(): " << cIb.getVel() << " tIb.getVel()" << tIb.getVel() << endl;
-        Info << "-- contact Filter -> cIb.getVel()-tIb.getVel(): " << cIb.getVel() - tIb.getVel() << " mag(cIb.getVel() - tIb.getVel())" << mag(cIb.getVel() - tIb.getVel()) << endl;
+        // Info << "-- contact Filter 1 -> contact pair: " << cIb.getBodyId() << " " << tIb.getBodyId() << endl;
+        // Info << "-- contact Filter 1 -> prtDist: " << prtDist << " relVelAngle: " << relVelAngle << " relVel: " << relVel << endl;
+        // Info << "-- contact Filter 1 -> contact normal: " << particleNormal << " magnitude" << mag(particleNormal) << endl;
+        // Info << "-- contact Filter 1 -> cIb.getVel(): " << cIb.getVel() << " tIb.getVel()" << tIb.getVel() << endl;
+        // Info << "-- contact Filter 1 -> cIb.getVel()-tIb.getVel(): " << cIb.getVel() - tIb.getVel() << " mag(cIb.getVel() - tIb.getVel())" << mag(cIb.getVel() - tIb.getVel()) << endl;
         return true;
     }
     return false;
@@ -161,15 +163,21 @@ bool prtCounterBox::checkPossibleContact2
     immersedBody& cIb, 
     immersedBody& tIb
 )
-
 {
-    scalar prtDist(mag(cIb.getGeomModel().getCoM() - tIb.getGeomModel().getCoM())-(cIb.getGeomModel().getDC()/2 + tIb.getGeomModel().getDC()/2));
+    scalar prtDist(mag(projectToPlane(cIb.getGeomModel().getCoM()) - projectToPlane(tIb.getGeomModel().getCoM()))-(cIb.getGeomModel().getDC()/2 + tIb.getGeomModel().getDC()/2));
     vector particleNormal(cIb.getGeomModel().getCoM() - tIb.getGeomModel().getCoM());
     particleNormal /= mag(particleNormal);
-    scalar relVel(mag(cIb.getVel() - tIb.getVel()));
-    scalar relVelAngle((cIb.getAxis() - tIb.getAxis()) & particleNormal);
-    if(prtDist < particleDistance_ && relVelAngle < 0 && relVel > particleDistance_/screeningTime_)
+    vector relVel(cIb.getVel() - tIb.getVel());
+    scalar relVelMag(mag(projectToPlane(relVel)));
+    scalar relVelAngle(projectToPlane(relVel) & projectToPlane(particleNormal));
+    
+    if(prtDist < particleDistance_ && relVelAngle < 0 && relVelMag > particleDistance_/screeningTime_)
     {
+        // Info << "-- contact Filter 2 -> contact pair: " << cIb.getBodyId() << " " << tIb.getBodyId() << endl;
+        // Info << "-- contact Filter 2 -> prtDistVer1: " << prtDistVer1 << " prtDist: " << prtDist << endl;
+        // Info << "-- contact Filter 2 -> particleNormalVer1: " << particleNormal << " particleNormal: " << projectToPlane(particleNormal) << endl;
+        // Info << "-- contact Filter 2 -> relVelVer1: " << relVel<< " mag: "<< mag(relVel) << " relVel: " << projectToPlane(relVel) << " mag: "<<  mag(projectToPlane(relVel)) <<endl;
+
         return true;
     }
     return false;

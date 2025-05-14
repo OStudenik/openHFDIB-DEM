@@ -53,18 +53,16 @@ namespace Foam
         typedef DynamicList<vector> DynamicVectorList;
         typedef DynamicList<point>  DynamicPointList;
         
-        scalar contactTime_= 0.0;
-        scalar screeningTime_= 0.0;
-        scalar activeTime_= 0.0;
-
-        Tuple2<label,label> recordedContactCount_= Tuple2<label,label> (0,0);
-
-        //screeningParameters
-        scalar particleDistance_= 0.0;
-        
+        scalar contactTime_;
+        scalar screeningTime_;
+        scalar particleDistance_;
+        vector studyPlaneNormal_;        
+        scalar activeTime_;
         HashTable<autoPtr<presentParticle>,label,Hash<label>>  storedParticles_;
+        
         labelHashSet currentParticles_;
         DynamicLabelList checkForContact_;
+        Tuple2<label,label> recordedContactCount_= Tuple2<label,label> (0,0);
 
 
         
@@ -74,7 +72,8 @@ namespace Foam
         (
             const scalar& contactTime,
             const scalar& screeningTime,
-            const scalar& particleDistance
+            const scalar& particleDistance,
+            const vector& studyPlaneNormal
         );
         // Destructors -----------------------------------------------------
         ~prtCounterBox(){}
@@ -141,6 +140,15 @@ namespace Foam
         {
             return recordedContactCount_;
         }
+
+        vector projectToPlane
+        (
+            const vector& point
+        )
+        {
+            return point - (point & studyPlaneNormal_) * studyPlaneNormal_;
+        }
+ 
     };
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 } // End namespace Foam
