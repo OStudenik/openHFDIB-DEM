@@ -38,8 +38,8 @@ Contributors
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#include "presentParticle.H"
 #include "immersedBody.H"
+#include "presentParticle.H"
 
 namespace Foam
 {
@@ -62,7 +62,9 @@ namespace Foam
         
         labelHashSet currentParticles_;
         DynamicLabelList checkForContact_;
+        DynamicLabelList checkForContact2_;
         Tuple2<label,label> recordedContactCount_= Tuple2<label,label> (0,0);
+        label countedContacts_ = 0;
 
 
         
@@ -80,7 +82,7 @@ namespace Foam
 
         void checkStoredParticles
         (
-            const immersedBody& ib,
+            immersedBody& ib,
             const scalar& timeStep
         );
 
@@ -90,6 +92,7 @@ namespace Foam
         {
             currentParticles_.clear();
             checkForContact_.clear();
+            checkForContact2_.clear();
         }
 
         label getParticleCount()
@@ -117,9 +120,19 @@ namespace Foam
             return activeTime_;
         }
 
+        bool checkScreeningTime()
+        {
+            return activeTime_>= screeningTime_;
+        }
+
         bool checkTimeCounter();
 
         void runPossibleContactScreening
+        (
+            PtrList<immersedBody>& immersedBodies
+        );
+
+        void runPossibleContactScreening2
         (
             PtrList<immersedBody>& immersedBodies
         );
@@ -131,6 +144,12 @@ namespace Foam
         );
 
         bool checkPossibleContact2
+        (
+            immersedBody& cIb,
+            immersedBody& tIb
+        );
+
+        bool checkPossibleContact3
         (
             immersedBody& cIb,
             immersedBody& tIb
@@ -147,6 +166,11 @@ namespace Foam
         )
         {
             return point - (point & studyPlaneNormal_) * studyPlaneNormal_;
+        }
+
+        label getCountedContacts()
+        {
+            return countedContacts_;
         }
  
     };

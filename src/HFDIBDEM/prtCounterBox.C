@@ -53,7 +53,7 @@ activeTime_(0),
 storedParticles_(0)
 {}
 //---------------------------------------------------------------------------//
-void prtCounterBox::checkStoredParticles(const immersedBody& ib, const scalar& timeStep)
+void prtCounterBox::checkStoredParticles(immersedBody& ib, const scalar& timeStep)
 {
     currentParticles_.insert(ib.getBodyId());
     if(!storedParticles_.found(ib.getBodyId()))
@@ -61,19 +61,26 @@ void prtCounterBox::checkStoredParticles(const immersedBody& ib, const scalar& t
         storedParticles_.insert(ib.getBodyId(), autoPtr<presentParticle>(new presentParticle));
         storedParticles_[ib.getBodyId()]->presentTime += timeStep;
         storedParticles_[ib.getBodyId()]->id = ib.getBodyId();
+        storedParticles_[ib.getBodyId()]->oldPos = ib.getGeomModel().getCoM();
     }
     else
     {
         storedParticles_[ib.getBodyId()]->presentTime += timeStep;
+
         if(storedParticles_[ib.getBodyId()]->presentTime > contactTime_)
         {
-            storedParticles_[ib.getBodyId()]->compContact = false;
+            storedParticles_[ib.getBodyId()]->compContact = true;
             checkForContact_.append(ib.getBodyId());
+            if(checkScreeningTime() && storedParticles_[ib.getBodyId()]->presentTime > screeningTime_)
+            {
+                storedParticles_[ib.getBodyId()]->velocity = (ib.getGeomModel().getCoM() - storedParticles_[ib.getBodyId()]->oldPos)/screeningTime_;
+                storedParticles_[ib.getBodyId()]->oldPos = ib.getGeomModel().getCoM();
+                checkForContact2_.append(ib.getBodyId());
+            }            
         }
         else
         {
-            storedParticles_[ib.getBodyId()]->compContact = true;
-
+            storedParticles_[ib.getBodyId()]->compContact = false;
         }
     }
 }
@@ -91,7 +98,7 @@ void prtCounterBox::checkPresentParticles()
 //---------------------------------------------------------------------------//
 bool prtCounterBox::checkTimeCounter()
 {
-    if(activeTime_ > screeningTime_)
+    if(activeTime_ >= screeningTime_)
     {
         activeTime_ = 0;
         return true;
@@ -134,6 +141,36 @@ void prtCounterBox::runPossibleContactScreening(PtrList<immersedBody>& immersedB
     }
 }
 //---------------------------------------------------------------------------//
+void prtCounterBox::runPossibleContactScreening2(PtrList<immersedBody>& immersedBodies)
+{
+
+    Info << "-- contact Filter type2 -> Number of contact screening particles: " << checkForContact2_.size() << endl;
+    if(checkForContact2_.size() > 2)// it has to be pair
+    {
+        //createPossibleContactPairs        
+        DynamicList<Tuple2<label,label>> possibleContactPairs;
+        forAll(checkForContact2_,i)
+        {
+            forAll(checkForContact2_,j)
+            {
+                if(i != j && checkForContact2_[i] < checkForContact2_[j])
+                {
+                    possibleContactPairs.append(Tuple2<label,label>(checkForContact2_[i],checkForContact2_[j]));
+                }
+            }
+        }
+
+        for(auto cPair : possibleContactPairs)
+        {
+            // Info << "-- contact Filter -> Checking possible contact pair: " << cPair.first() << " " << cPair.second() << endl;
+            if(checkPossibleContact3(immersedBodies[cPair.first()],immersedBodies[cPair.second()]))
+            {
+                countedContacts_++;
+            }
+        }
+    }
+}
+//---------------------------------------------------------------------------//
 bool prtCounterBox::checkPossibleContact1
 (
     immersedBody& cIb, 
@@ -142,22 +179,29 @@ bool prtCounterBox::checkPossibleContact1
 {
 
     scalar prtDist(mag(cIb.getGeomModel().getCoM() - tIb.getGeomModel().getCoM())-(cIb.getGeomModel().getDC()/2 + tIb.getGeomModel().getDC()/2));
+    // scalar prtDistPlane(mag(projectToPlane(cIb.getGeomModel().getCoM()) - projectToPlane(tIb.getGeomModel().getCoM()))-(cIb.getGeomModel().getDC()/2 + tIb.getGeomModel().getDC()/2));
     vector particleNormal(cIb.getGeomModel().getCoM() - tIb.getGeomModel().getCoM());
     particleNormal /= mag(particleNormal);
     scalar relVel(mag(cIb.getVel() - tIb.getVel()));
     scalar relVelAngle((cIb.getAxis() - tIb.getAxis()) & particleNormal);
+    
+    // scalar relVelMag(mag(projectToPlane(cIb.getVel() - tIb.getVel())));
+    // scalar relVelAnglePlane(projectToPlane((cIb.getVel() - tIb.getVel())) & projectToPlane(particleNormal));
+    // bool condition1 = prtDistPlane < particleDistance_;
+    // bool condition2 = relVelAnglePlane < 0;
+    // bool condition3 = relVelMag > particleDistance_/screeningTime_;
 
     if(prtDist < particleDistance_ && relVelAngle < 0 && relVel > particleDistance_/screeningTime_)
     {
-        // Info << "-- contact Filter 1 -> contact pair: " << cIb.getBodyId() << " " << tIb.getBodyId() << endl;
-        // Info << "-- contact Filter 1 -> prtDist: " << prtDist << " relVelAngle: " << relVelAngle << " relVel: " << relVel << endl;
-        // Info << "-- contact Filter 1 -> contact normal: " << particleNormal << " magnitude" << mag(particleNormal) << endl;
-        // Info << "-- contact Filter 1 -> cIb.getVel(): " << cIb.getVel() << " tIb.getVel()" << tIb.getVel() << endl;
-        // Info << "-- contact Filter 1 -> cIb.getVel()-tIb.getVel(): " << cIb.getVel() - tIb.getVel() << " mag(cIb.getVel() - tIb.getVel())" << mag(cIb.getVel() - tIb.getVel()) << endl;
+        // Info << "-- contact Filter 1 -> contact pair: " << cIb.getBodyId() << "-" << tIb.getBodyId() << endl;
+        // Info << "-- contact Filter 1 -> prtDist: " << prtDist << " prtDistPlane " << prtDistPlane << " Status : " << condition1 << endl;
+        // Info << "-- contact Filter 1 -> relVelAngle: " << relVelAngle << " relVelAnglePlane " << relVelAnglePlane << " Status : " << condition2 << endl;
+        // Info << "-- contact Filter 1 -> relVelMag: " << relVel << " relVelMagPlane " << relVelMag  << " Status : " << condition3<< endl;
         return true;
     }
     return false;
-}//---------------------------------------------------------------------------//
+}
+//---------------------------------------------------------------------------//
 bool prtCounterBox::checkPossibleContact2
 (
     immersedBody& cIb, 
@@ -170,16 +214,82 @@ bool prtCounterBox::checkPossibleContact2
     vector relVel(cIb.getVel() - tIb.getVel());
     scalar relVelMag(mag(projectToPlane(relVel)));
     scalar relVelAngle(projectToPlane(relVel) & projectToPlane(particleNormal));
-    
+    // scalar relVelOutPlane(relVel & particleNormal);
+
     if(prtDist < particleDistance_ && relVelAngle < 0 && relVelMag > particleDistance_/screeningTime_)
     {
-        // Info << "-- contact Filter 2 -> contact pair: " << cIb.getBodyId() << " " << tIb.getBodyId() << endl;
-        // Info << "-- contact Filter 2 -> prtDistVer1: " << prtDistVer1 << " prtDist: " << prtDist << endl;
-        // Info << "-- contact Filter 2 -> particleNormalVer1: " << particleNormal << " particleNormal: " << projectToPlane(particleNormal) << endl;
-        // Info << "-- contact Filter 2 -> relVelVer1: " << relVel<< " mag: "<< mag(relVel) << " relVel: " << projectToPlane(relVel) << " mag: "<<  mag(projectToPlane(relVel)) <<endl;
-
         return true;
     }
     return false;
 }
 //---------------------------------------------------------------------------//
+// bool prtCounterBox::checkPossibleContact3
+// (
+//     immersedBody& cIb, 
+//     immersedBody& tIb
+// )
+// {
+//     scalar prtDist = mag(projectToPlane(cIb.getGeomModel().getCoM()) - projectToPlane(tIb.getGeomModel().getCoM()))-(cIb.getGeomModel().getDC()/2 + tIb.getGeomModel().getDC()/2);
+//     vector particleNormal(projectToPlane(cIb.getGeomModel().getCoM()) - projectToPlane(tIb.getGeomModel().getCoM()));
+//     particleNormal /= mag(particleNormal);
+//     vector relVel(projectToPlane(storedParticles_[cIb.getBodyId()]->velocity) - projectToPlane(storedParticles_[tIb.getBodyId()]->velocity));
+//     scalar relVelMag(mag(projectToPlane(relVel)));
+//     scalar relVelAngle(relVel & particleNormal);
+
+//     bool condition1 = prtDist < particleDistance_;
+//     bool condition2 = relVelAngle < 0;
+//     bool condition3 = relVelMag > particleDistance_/screeningTime_;
+
+//     if(prtDist < particleDistance_ && relVelAngle < 0 && relVelMag > particleDistance_/screeningTime_)
+//     {
+//         // Info << "-- contact Filter 3 -> contact pair: " << cIb.getBodyId() << "-" << tIb.getBodyId() << endl;
+//         // Info << "-- contact Filter 3 -> prtDist: " << prtDist << " Status : " << condition1 << endl;
+//         // Info << "-- contact Filter 3 -> relVelAngle: " << relVelAngle << " Status : " << condition2 << endl;
+//         // Info << "-- contact Filter 3 -> relVelMag: " << relVelMag  << " Status : " << condition3<< endl;
+//         return true;
+//     }
+//     return false;
+// }
+//---------------------------------------------------------------------------//
+bool prtCounterBox::checkPossibleContact3
+(
+      immersedBody& cIb, 
+      immersedBody& tIb
+)
+{
+    //in-plane projected CoMs
+    vector cIbCoM(projectToPlane(cIb.getGeomModel().getCoM()));
+    vector tIbCoM(projectToPlane(tIb.getGeomModel().getCoM()));
+
+    //distance between in-plane projected particles (using full radii)
+    scalar prtDist(
+        mag(cIbCoM - tIbCoM) - 0.5*(cIb.getGeomModel().getDC() + tIb.getGeomModel().getDC())
+    ); 
+
+    //particle normal between in-plane projected particles 
+    vector particleNormal(cIbCoM - tIbCoM); 
+    particleNormal /= mag(particleNormal);
+
+    //in-plane projected velocities
+    // vector cIbVel(projectToPlane(cIb.getVel()));
+    // vector tIbVel(projectToPlane(tIb.getVel()));
+    vector cIbVel(storedParticles_[cIb.getBodyId()]->velocity);
+    vector tIbVel(storedParticles_[tIb.getBodyId()]->velocity);
+    // Note (MI): Ondra, here, we should plug-in the corrected particle velocity computation (based on the experiment) 
+
+    //relative velocity (after projection)
+    vector relVel(cIbVel-tIbVel);
+    scalar relVelMag(mag(relVel));
+
+    //angle between relative velocity and particle normal (I already work with projected data)
+    scalar relVelAngle(relVel & particleNormal);
+    relVelAngle /= mag(relVel);
+ // Note (MI): particleNormal is a unit vector, relVel is not. This is just a normalization for the cases of extremely small particles  
+            
+      if(prtDist < particleDistance_ && relVelAngle < 0 && relVelMag > particleDistance_/screeningTime_)
+      {
+        return true;
+      }
+      return false;
+}
+

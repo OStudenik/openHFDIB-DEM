@@ -1320,6 +1320,8 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF, volSc
         InfoH << statistics_Info << "-- number of prt-prt contacts resolved in zone " << zone << " :  " << zoneContactCounter_[zone].first() << endl;
         InfoH << statistics_Info << "-- number of prt-wall contacts resolved in zone " << zone << " : " << zoneContactCounter_[zone].second() << endl;
         label nParticles(0);
+        prtCounterBoxTable_[zone]->updateTimeCounter(timeStep);
+
         forAll(immersedBodies_,ib)
         {
             if(immersedBodies_[ib].getIsActive())
@@ -1327,7 +1329,10 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF, volSc
                 if(contactZoneInfo::getZoneInfo()[zone].contains(immersedBodies_[ib].getGeomModel().getCoM()))
                 {
                     nParticles++;
+                    // if(prtCounterBoxTable_[zone]->checkScreeningTime)
+                    // {
                     prtCounterBoxTable_[zone]->checkStoredParticles(immersedBodies_[ib],timeStep);
+                    // }                    
                 }
             }
         }
@@ -1344,19 +1349,23 @@ void openHFDIBDEM::updateDEM(volScalarField& body,volScalarField& refineF, volSc
         reduce(presentLambda,sumOp<scalar>());
         reduce(presentVolume,sumOp<scalar>());
         InfoH << statistics_Info << "-- lambda based porosity fraction in zone " << zone << " : " << 1 - double(presentLambda)/(presentVolume+SMALL) << endl;
-        //runTheParticleScreening
+        // if(prtCounterBoxTable_[zone]->checkScreeningTime)
+        // {
         prtCounterBoxTable_[zone]->checkPresentParticles();
-        prtCounterBoxTable_[zone]->updateTimeCounter(timeStep);
+    
         InfoH << statistics_Info << "-- > particleContactContactScreeningTime is  " <<prtCounterBoxTable_[zone]->getActiveTime() << endl;
         if(prtCounterBoxTable_[zone]->checkTimeCounter())
         {
             InfoH << statistics_Info << "-- particle contact screening is initiated in zone " << zone << endl;
             prtCounterBoxTable_[zone]->runPossibleContactScreening(immersedBodies_);
+            prtCounterBoxTable_[zone]->runPossibleContactScreening2(immersedBodies_);
             InfoH << statistics_Info << "-- particle contact screening in " << zone << " contacts based on condition#1 : " << prtCounterBoxTable_[zone]->getContactCount().first()  << " contacts based on condition#2 : "<< prtCounterBoxTable_[zone]->getContactCount().second() <<endl;
+            InfoH << statistics_Info << "-- particle contact screening in " << zone << " contacts based on condition#3 : " << prtCounterBoxTable_[zone]->getCountedContacts()  <<endl;
         }
         InfoH << statistics_Info << "-- number of particles in zone " << zone << " : " << prtCounterBoxTable_[zone]->getParticleCount() << endl;
         InfoH << statistics_Info << "-- longer than resident Time in zone " << zone << " : " << prtCounterBoxTable_[zone]->getCurrentContactReadyCount() << endl;
         prtCounterBoxTable_[zone]->clearData();
+        // }
 
 
     }

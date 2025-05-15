@@ -28,6 +28,9 @@ InNamspace
 Description
     Static class for storing contact zones for contact counterss
 
+SourceFiles
+    prtCounterBox.C
+
 Contributors
     Martin Isoz (2019-*), Martin Kotouč Šourek (2019-*),
     Ondřej Studeník (2020-*)
@@ -46,6 +49,8 @@ namespace Foam
         int id = -1;
         double presentTime = 0;
         bool compContact = false;
+        vector oldPos = vector::zero;
+        vector velocity = vector::zero;
         // Destructors -------------------------------------------------        
         ~presentParticle(){}
     };
