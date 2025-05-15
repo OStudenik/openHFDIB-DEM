@@ -273,8 +273,8 @@ bool prtCounterBox::checkPossibleContact3
     //in-plane projected velocities
     // vector cIbVel(projectToPlane(cIb.getVel()));
     // vector tIbVel(projectToPlane(tIb.getVel()));
-    vector cIbVel(storedParticles_[cIb.getBodyId()]->velocity);
-    vector tIbVel(storedParticles_[tIb.getBodyId()]->velocity);
+    vector cIbVel(projectToPlane(storedParticles_[cIb.getBodyId()]->velocity));
+    vector tIbVel(projectToPlane(storedParticles_[tIb.getBodyId()]->velocity));
     // Note (MI): Ondra, here, we should plug-in the corrected particle velocity computation (based on the experiment) 
 
     //relative velocity (after projection)
