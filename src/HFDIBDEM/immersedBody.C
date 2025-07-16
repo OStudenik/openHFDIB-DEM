@@ -492,42 +492,23 @@ void immersedBody::updateCoupling
     vector FV(vector::zero);
     vector TA(vector::zero);
 
-    List<DynamicLabelList> intLists;
-    List<DynamicLabelList> surfLists;
-    DynamicVectorList refCoMList;
+    DynamicLabelList& intList(getInternalCellList()[Pstream::myProcNo()]);
+    DynamicLabelList& surfList(getSurfaceCellList()[Pstream::myProcNo()]);
 
-    geomModel_->getReferencedLists(
-        intLists,
-        surfLists,
-        refCoMList
-    );
-
-  // calcualate viscous force and torque
-
-    forAll (intLists, i)
+    forAll(intList, i)
     {
-        DynamicLabelList& intListI = intLists[i];
-        forAll (intListI, intCell)
-        {
-            label cellI = intListI[intCell];
-
-            FV -=  f[cellI]*mesh_.V()[cellI];
-            TA -=  ((mesh_.C()[cellI] - refCoMList[i])^f[cellI])
-                *mesh_.V()[cellI];
-        }
+        label cellI = intList[i];
+        FV -= body[cellI]*f[cellI]*mesh_.V()[cellI];
+        TA -= ((mesh_.C()[cellI] - geomModel_->getCoM())^(body[cellI]*f[cellI]))
+            *mesh_.V()[cellI];
     }
 
-    forAll (surfLists, i)
+    forAll(surfList, i)
     {
-        DynamicLabelList& surfListI = surfLists[i];
-        forAll (surfListI, surfCell)
-        {
-            label cellI = surfListI[surfCell];
-
-            FV -=  f[cellI]*mesh_.V()[cellI];
-            TA -=  ((mesh_.C()[cellI] - refCoMList[i])^f[cellI])
-                *mesh_.V()[cellI];
-        }
+        label cellI = surfList[i];
+        FV -= body[cellI]*f[cellI]*mesh_.V()[cellI];
+        TA -= ((mesh_.C()[cellI] - geomModel_->getCoM())^(body[cellI]*f[cellI]))
+            *mesh_.V()[cellI];
     }
 
   reduce(FV, sumOp<vector>());
@@ -590,8 +571,10 @@ void immersedBody::updateMovementComp
         {
             // compute current acceleration (assume constant over timeStep)
 
-            InfoH << iB_Info <<"-- body "<< bodyId_ <<" ParticelMass  : " << geomModel_->getM0() << endl;
-            InfoH << iB_Info <<"-- body "<< bodyId_ <<" Acting Force  : " << F << endl;
+            InfoH << iB_Info <<"-- body "<< bodyId_ <<" ParticelMass    : " << geomModel_->getM0() << endl;
+            InfoH << iB_Info <<"-- body "<< bodyId_ <<" Acting Force    : " << F << endl;
+            InfoH << iB_Info <<"-- body "<< bodyId_ <<" Coupling Force  : " << FCoupling_.F << endl;
+            InfoH << iB_Info <<"-- body "<< bodyId_ <<" G-B Force       : " << FG << endl;
             a_  = F/(geomModel_->getM0());
             // update body linear velocity
             Vel_ = Vel + deltaT*a_;
