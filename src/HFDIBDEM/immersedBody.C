@@ -492,38 +492,50 @@ void immersedBody::updateCoupling
     vector FV(vector::zero);
     vector TA(vector::zero);
 
-    List<DynamicLabelList> intList;
-    List<DynamicLabelList> surfList;
+    List<DynamicLabelList> intLists;
+    List<DynamicLabelList> surfLists;
     DynamicVectorList refCoMList;
 
     geomModel_->getReferencedLists(
-        intList,
-        surfList,
+        intLists,
+        surfLists,
         refCoMList
     );
 
-    forAll(intList[Pstream::myProcNo()], i)
+      // calcualate viscous force and torque
+
+    forAll (intLists, i)
     {
-        label cellI = intList[Pstream::myProcNo()][i];
-        FV -= body[cellI]*f[cellI]*mesh_.V()[cellI];
-        TA -= ((mesh_.C()[cellI] - refCoMList[Pstream::myProcNo()])^(body[cellI]*f[cellI]))
-            *mesh_.V()[cellI];
+        DynamicLabelList& intListI = intLists[i];
+        forAll (intListI, intCell)
+        {
+            label cellI = intListI[intCell];
+
+            FV -=  f[cellI]*mesh_.V()[cellI];
+            TA -=  ((mesh_.C()[cellI] - refCoMList[i])^f[cellI])
+                *mesh_.V()[cellI];
+        }
     }
 
-    forAll(surfList[Pstream::myProcNo()], i)
+    forAll (surfLists, i)
     {
-        label cellI = surfList[Pstream::myProcNo()][i];
-        FV -= body[cellI]*f[cellI]*mesh_.V()[cellI];
-        TA -= ((mesh_.C()[cellI] - refCoMList[Pstream::myProcNo()])^(body[cellI]*f[cellI]))
-            *mesh_.V()[cellI];
+        DynamicLabelList& surfListI = surfLists[i];
+        forAll (surfListI, surfCell)
+        {
+            label cellI = surfListI[surfCell];
+
+            FV -=  body[cellI]*f[cellI]*mesh_.V()[cellI];
+            TA -=  ((mesh_.C()[cellI] - refCoMList[i])^(body[cellI]*f[cellI])
+                *mesh_.V()[cellI]);
+        }
     }
 
-  reduce(FV, sumOp<vector>());
-  reduce(TA, sumOp<vector>());
-  FV *= rhoF_.value();
-  TA *= rhoF_.value();
+    reduce(FV, sumOp<vector>());
+    reduce(TA, sumOp<vector>());
+    FV *= rhoF_.value();
+    TA *= rhoF_.value();
 
-  FCoupling_ = forces(FV, TA);
+    FCoupling_ = forces(FV, TA);
 }
 //---------------------------------------------------------------------------//
 // update movement variables of the body
