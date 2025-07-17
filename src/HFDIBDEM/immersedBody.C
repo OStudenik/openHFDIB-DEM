@@ -492,22 +492,29 @@ void immersedBody::updateCoupling
     vector FV(vector::zero);
     vector TA(vector::zero);
 
-    DynamicLabelList& intList(getInternalCellList()[Pstream::myProcNo()]);
-    DynamicLabelList& surfList(getSurfaceCellList()[Pstream::myProcNo()]);
+    List<DynamicLabelList> intList;
+    List<DynamicLabelList> surfList;
+    DynamicVectorList refCoMList;
 
-    forAll(intList, i)
+    geomModel_->getReferencedLists(
+        intList,
+        surfList,
+        refCoMList
+    );
+
+    forAll(intList[Pstream::myProcNo()], i)
     {
-        label cellI = intList[i];
+        label cellI = intList[Pstream::myProcNo()][i];
         FV -= body[cellI]*f[cellI]*mesh_.V()[cellI];
-        TA -= ((mesh_.C()[cellI] - geomModel_->getCoM())^(body[cellI]*f[cellI]))
+        TA -= ((mesh_.C()[cellI] - refCoMList[Pstream::myProcNo()])^(body[cellI]*f[cellI]))
             *mesh_.V()[cellI];
     }
 
-    forAll(surfList, i)
+    forAll(surfList[Pstream::myProcNo()], i)
     {
-        label cellI = surfList[i];
+        label cellI = surfList[Pstream::myProcNo()][i];
         FV -= body[cellI]*f[cellI]*mesh_.V()[cellI];
-        TA -= ((mesh_.C()[cellI] - geomModel_->getCoM())^(body[cellI]*f[cellI]))
+        TA -= ((mesh_.C()[cellI] - refCoMList[Pstream::myProcNo()])^(body[cellI]*f[cellI]))
             *mesh_.V()[cellI];
     }
 
@@ -576,7 +583,7 @@ void immersedBody::updateMovementComp
             InfoH << iB_Info <<"-- body "<< bodyId_ <<" Coupling Force  : " << FCoupling_.F << endl;
             InfoH << iB_Info <<"-- body "<< bodyId_ <<" G-B Force       : " << FG << endl;
             a_  = F/(geomModel_->getM0());
-            // update body linear velocity
+            // update body linear velocity      
             Vel_ = Vel + deltaT*a_;
             InfoH << iB_Info <<"-- body "<< bodyId_ <<" accelaration  : " << a_ << endl;
         }
