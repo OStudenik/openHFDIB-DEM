@@ -233,6 +233,10 @@ bool detectPrtPrtContact_Sphere
     ibContactClass& tClass
 )
 {
+    Info << "COM Distances: " 
+         << mag(cClass.getGeomModel().getCoM()-tClass.getGeomModel().getCoM()) << endl;
+    Info << "Sum Radii: " 
+         << ((cClass.getGeomModel().getDC() / 2) + (tClass.getGeomModel().getDC() / 2)) << endl;
     if
     (
         mag(cClass.getGeomModel().getCoM()-tClass.getGeomModel().getCoM())
@@ -240,6 +244,7 @@ bool detectPrtPrtContact_Sphere
         ((cClass.getGeomModel().getDC() / 2) + (tClass.getGeomModel().getDC() / 2))
     )
     {
+        Info << "Sphere-Sphere contact detected." << endl;
         return true;
     }
     return false;
@@ -398,6 +403,7 @@ void getPrtContactVars_Sphere
 
     if(mag(centerDir) < SMALL || d > (cRadius + tRadius))
     {
+        Pout << "No Sphere-Sphere contact detected with mag(centerDir): " <<  mag(centerDir) << " and sum of radii: " << cRadius + tRadius << endl;
         subCInfo.getprtCntVars().contactCenter_ = vector::zero;
         subCInfo.getprtCntVars().contactVolume_ = 0;
         subCInfo.getprtCntVars().contactNormal_ = vector::zero;

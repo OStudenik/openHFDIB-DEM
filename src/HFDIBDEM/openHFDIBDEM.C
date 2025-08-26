@@ -473,7 +473,37 @@ void openHFDIBDEM::initialize
             std::shared_ptr<geomModel> bodyGeomModel(addModels_[modelI].addBody(body, immersedBodies_));
             cAddition++;
 
-            // initialize the immersed bodies
+            bool bBoxContact = false;
+            forAll(immersedBodies_, ibI)
+            {
+                boundBox ibIbBox = immersedBodies_[ibI].getGeomModel().getBounds();
+                boundBox cbBox = bodyGeomModel->getBounds();
+
+                forAll(geometricD,dir)
+                {
+                    if(geometricD[dir] == 1)
+                    {
+
+                        if(ibIbBox.max()[dir] >= cbBox.min()[dir] && ibIbBox.min()[dir] <= cbBox.max()[dir])
+                        {
+                            vector centerDir = immersedBodies_[ibI].getGeomModel().getCoM() - bodyGeomModel->getCoM();
+                            scalar dist = mag(centerDir);
+                            if(dist < SMALL)
+                            {
+                                Info << " -- Warning: Bodies are overlayed with COMs are " << immersedBodies_[ibI].getGeomModel().getCoM() << " " << bodyGeomModel->getCoM() << ". Skipping body addition." << endl;
+                                bBoxContact = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if(bBoxContact)
+            {
+                continue;
+            }
+
             if (addModels_[modelI].getBodyAdded())
             {
                 label newIBSize(immersedBodies_.size()+1);
@@ -1647,6 +1677,38 @@ void openHFDIBDEM::restartSimulation
                 << " not supported, using bodyGeom nonConvex" << endl;
             bodyGeom = "nonConvex";
             bodyGeomModel = std::make_shared<nonConvexBody>(mesh_,stlPath,thrSurf);
+        }
+
+        bool bBoxContact = false;
+
+        forAll(immersedBodies_, ibI)
+        {
+            boundBox ibIbBox = immersedBodies_[ibI].getGeomModel().getBounds();
+            boundBox cbBox = bodyGeomModel->getBounds();
+
+            forAll(geometricD,dir)
+            {
+                if(geometricD[dir] == 1)
+                {
+
+                    if(ibIbBox.max()[dir] >= cbBox.min()[dir] && ibIbBox.min()[dir] <= cbBox.max()[dir])
+                    {
+                        vector centerDir = immersedBodies_[ibI].getGeomModel().getCoM() - bodyGeomModel->getCoM();
+                        scalar dist = mag(centerDir);
+                        if(dist < SMALL)
+                        {
+                            Info << " -- Warning: Bodies are overlayed with COMs are " << immersedBodies_[ibI].getGeomModel().getCoM() << " " << bodyGeomModel->getCoM() << ". Skipping body addition." << endl;
+                            bBoxContact = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if(bBoxContact)
+        {
+            continue;
         }
 
         label newIBSize(immersedBodies_.size()+1);
